@@ -1,0 +1,2239 @@
+{
+  "origen_base_default": "Táriba",
+  "combinaciones": [
+    {
+      "id": "comb_1",
+      "tipo": "combinacion",
+      "raw": "Arjona 46/Centro",
+      "origen": "Arjona 46",
+      "destino": "Centro",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "comb_2",
+      "tipo": "combinacion",
+      "raw": "Arjona 46/Concordia",
+      "origen": "Arjona 46",
+      "destino": "Concordia",
+      "cop_raw": 23.0,
+      "cop": 23000
+    },
+    {
+      "id": "comb_3",
+      "tipo": "combinacion",
+      "raw": "Las Vegas P6/Centro",
+      "origen": "Las Vegas P6",
+      "destino": "Centro",
+      "cop_raw": 17.0,
+      "cop": 17000
+    },
+    {
+      "id": "comb_4",
+      "tipo": "combinacion",
+      "raw": "Las Vegas P6/Concordia",
+      "origen": "Las Vegas P6",
+      "destino": "Concordia",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_5",
+      "tipo": "combinacion",
+      "raw": "Las Vegas P6/B.Obrero",
+      "origen": "Las Vegas P6",
+      "destino": "B.Obrero",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "comb_6",
+      "tipo": "combinacion",
+      "raw": "Las Vegas P6/P.Nuevo",
+      "origen": "Las Vegas P6",
+      "destino": "P.Nuevo",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "comb_7",
+      "tipo": "combinacion",
+      "raw": "Las Vegas P6/B.Sucre",
+      "origen": "Las Vegas P6",
+      "destino": "B.Sucre",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_8",
+      "tipo": "combinacion",
+      "raw": "Las Vegas P6/B.Libertador",
+      "origen": "Las Vegas P6",
+      "destino": "B.Libertador",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_9",
+      "tipo": "combinacion",
+      "raw": "Sabaneta/Centro",
+      "origen": "Sabaneta",
+      "destino": "Centro",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "comb_10",
+      "tipo": "combinacion",
+      "raw": "Sabaneta/Concordia",
+      "origen": "Sabaneta",
+      "destino": "Concordia",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_11",
+      "tipo": "combinacion",
+      "raw": "Sabaneta/B.Obrero",
+      "origen": "Sabaneta",
+      "destino": "B.Obrero",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_12",
+      "tipo": "combinacion",
+      "raw": "Sabaneta/Mercado",
+      "origen": "Sabaneta",
+      "destino": "Mercado",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "comb_13",
+      "tipo": "combinacion",
+      "raw": "Palmira/Centro",
+      "origen": "Palmira",
+      "destino": "Centro",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_14",
+      "tipo": "combinacion",
+      "raw": "Palmira/Concordia",
+      "origen": "Palmira",
+      "destino": "Concordia",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "comb_15",
+      "tipo": "combinacion",
+      "raw": "Abejal Transito/Centro",
+      "origen": "Abejal Transito",
+      "destino": "Centro",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "comb_16",
+      "tipo": "combinacion",
+      "raw": "Abejal Transito/Concordia",
+      "origen": "Abejal Transito",
+      "destino": "Concordia",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "comb_17",
+      "tipo": "combinacion",
+      "raw": "Caneyes/Centro",
+      "origen": "Caneyes",
+      "destino": "Centro",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "comb_18",
+      "tipo": "combinacion",
+      "raw": "Caneyes/Concordia",
+      "origen": "Caneyes",
+      "destino": "Concordia",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "comb_19",
+      "tipo": "combinacion",
+      "raw": "Bocas C/Centro",
+      "origen": "Bocas C",
+      "destino": "Centro",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "comb_20",
+      "tipo": "combinacion",
+      "raw": "Bocas C/Concordia",
+      "origen": "Bocas C",
+      "destino": "Concordia",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_21",
+      "tipo": "combinacion",
+      "raw": "Bocas C/Mercado",
+      "origen": "Bocas C",
+      "destino": "Mercado",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "comb_22",
+      "tipo": "combinacion",
+      "raw": "Tucape/Centro",
+      "origen": "Tucape",
+      "destino": "Centro",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_23",
+      "tipo": "combinacion",
+      "raw": "Tucape/Concordia",
+      "origen": "Tucape",
+      "destino": "Concordia",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "comb_24",
+      "tipo": "combinacion",
+      "raw": "Tucape/Mercado",
+      "origen": "Tucape",
+      "destino": "Mercado",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "comb_25",
+      "tipo": "combinacion",
+      "raw": "Capachito P/B/Centro",
+      "origen": "Capachito P",
+      "destino": "B",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_26",
+      "tipo": "combinacion",
+      "raw": "Capachito P/A/Concordia",
+      "origen": "Capachito P",
+      "destino": "A",
+      "cop_raw": 35.0,
+      "cop": 35000
+    },
+    {
+      "id": "comb_27",
+      "tipo": "combinacion",
+      "raw": "Junco Matadero1/Centro",
+      "origen": "Junco Matadero1",
+      "destino": "Centro",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_28",
+      "tipo": "combinacion",
+      "raw": "Junco 46/Centro",
+      "origen": "Junco 46",
+      "destino": "Centro",
+      "cop_raw": 27.0,
+      "cop": 27000
+    },
+    {
+      "id": "comb_29",
+      "tipo": "combinacion",
+      "raw": "Junco Paramo/Centro",
+      "origen": "Junco Paramo",
+      "destino": "Centro",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "comb_30",
+      "tipo": "combinacion",
+      "raw": "El Torbes/Centro",
+      "origen": "El Torbes",
+      "destino": "Centro",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_31",
+      "tipo": "combinacion",
+      "raw": "Cilgara/Centro",
+      "origen": "Cilgara",
+      "destino": "Centro",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "comb_32",
+      "tipo": "combinacion",
+      "raw": "Diamante/Centro",
+      "origen": "Diamante",
+      "destino": "Centro",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "comb_33",
+      "tipo": "combinacion",
+      "raw": "Diamante/Concordia",
+      "origen": "Diamante",
+      "destino": "Concordia",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_34",
+      "tipo": "combinacion",
+      "raw": "Diamante/B.Obrero",
+      "origen": "Diamante",
+      "destino": "B.Obrero",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_35",
+      "tipo": "combinacion",
+      "raw": "El Vegon/Centro",
+      "origen": "El Vegon",
+      "destino": "Centro",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_36",
+      "tipo": "combinacion",
+      "raw": "El Vegon/Concordia",
+      "origen": "El Vegon",
+      "destino": "Concordia",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "comb_37",
+      "tipo": "combinacion",
+      "raw": "El Hiranzo/Centro",
+      "origen": "El Hiranzo",
+      "destino": "Centro",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_38",
+      "tipo": "combinacion",
+      "raw": "El Hiranzo/Concordia",
+      "origen": "El Hiranzo",
+      "destino": "Concordia",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "comb_39",
+      "tipo": "combinacion",
+      "raw": "Llanitos/Centro",
+      "origen": "Llanitos",
+      "destino": "Centro",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_40",
+      "tipo": "combinacion",
+      "raw": "Llanitos/Concordia",
+      "origen": "Llanitos",
+      "destino": "Concordia",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "comb_41",
+      "tipo": "combinacion",
+      "raw": "San Rafael 46/Centro",
+      "origen": "San Rafael 46",
+      "destino": "Centro",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_42",
+      "tipo": "combinacion",
+      "raw": "San Rafael Y/Centro",
+      "origen": "San Rafael Y",
+      "destino": "Centro",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "comb_43",
+      "tipo": "combinacion",
+      "raw": "San Rafael PA/Centro",
+      "origen": "San Rafael PA",
+      "destino": "Centro",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "comb_44",
+      "tipo": "combinacion",
+      "raw": "San Rafael 12Otc/Centro",
+      "origen": "San Rafael 12Otc",
+      "destino": "Centro",
+      "cop_raw": 35.0,
+      "cop": 35000
+    },
+    {
+      "id": "comb_45",
+      "tipo": "combinacion",
+      "raw": "Lomas B.Parada.B/Centro",
+      "origen": "Lomas B.Parada.B",
+      "destino": "Centro",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_46",
+      "tipo": "combinacion",
+      "raw": "Lomas B.Flamingo/Centro",
+      "origen": "Lomas B.Flamingo",
+      "destino": "Centro",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "comb_47",
+      "tipo": "combinacion",
+      "raw": "Cordero Plaza/Centro",
+      "origen": "Cordero Plaza",
+      "destino": "Centro",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "comb_48",
+      "tipo": "combinacion",
+      "raw": "Cordero M.Felipe/Centro",
+      "origen": "Cordero M.Felipe",
+      "destino": "Centro",
+      "cop_raw": 35.0,
+      "cop": 35000
+    },
+    {
+      "id": "comb_49",
+      "tipo": "combinacion",
+      "raw": "Margaritas Policia/Centro",
+      "origen": "Margaritas Policia",
+      "destino": "Centro",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "comb_50",
+      "tipo": "combinacion",
+      "raw": "Margaritas Carrascal/Centro",
+      "origen": "Margaritas Carrascal",
+      "destino": "Centro",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "comb_51",
+      "tipo": "combinacion",
+      "raw": "Margaritas Pol/Concordia",
+      "origen": "Margaritas Pol",
+      "destino": "Concordia",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_52",
+      "tipo": "combinacion",
+      "raw": "Margaritas P/A/Concordia",
+      "origen": "Margaritas P",
+      "destino": "A",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "comb_53",
+      "tipo": "combinacion",
+      "raw": "Patiecitos/Centro",
+      "origen": "Patiecitos",
+      "destino": "Centro",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "comb_54",
+      "tipo": "combinacion",
+      "raw": "Patiecitos/Concordia",
+      "origen": "Patiecitos",
+      "destino": "Concordia",
+      "cop_raw": 25.0,
+      "cop": 25000
+    }
+  ],
+  "rutas_base": [
+    {
+      "id": "base_1",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Aerop San Antonio",
+      "cop_raw": 120.0,
+      "cop": 120000
+    },
+    {
+      "id": "base_2",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Aerop Santo Dom",
+      "cop_raw": 120.0,
+      "cop": 120000
+    },
+    {
+      "id": "base_3",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Arjona",
+      "cop_raw": 12.0,
+      "cop": 12000
+    },
+    {
+      "id": "base_4",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Abejal Policia",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_5",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Abejal las malvinas",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_6",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Alcabala Copa d Oro",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_7",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Altos de Gallardín",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_8",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Altos de Paramillo",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_9",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Altos De Pirineos",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_10",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrancas P/B",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_11",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrancas P/A Ppal",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_12",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrancas la loma",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_13",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio Libertador",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_14",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio Sucre",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_15",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio Obrero",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_16",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio el Rio",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_17",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio Rom Gallegos",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_18",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio el Hoyo",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_19",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio la Playa",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_20",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio alianza",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_21",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio 23 enero",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_22",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio marco tulio",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_23",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Borota",
+      "cop_raw": 50.0,
+      "cop": 50000
+    },
+    {
+      "id": "base_24",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Berlin Via Rubio",
+      "cop_raw": 40.0,
+      "cop": 40000
+    },
+    {
+      "id": "base_25",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Boca Caneyes",
+      "cop_raw": 12.0,
+      "cop": 12000
+    },
+    {
+      "id": "base_26",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Boca Caneyes P/A",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_27",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Barrio Bolivar",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_28",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Centro 5ta/7ma",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_29",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Caneyes",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_30",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Cordero Plaza Bolivar",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_31",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Cordero Esguarna",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_32",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Cordero Manuel Felip",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_33",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Colinas de Pirineos",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_34",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Capachito Urb",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_35",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Capachito P/A",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_36",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Capacho Indep",
+      "cop_raw": 40.0,
+      "cop": 40000
+    },
+    {
+      "id": "base_37",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Capacho Liberta",
+      "cop_raw": 45.0,
+      "cop": 45000
+    },
+    {
+      "id": "base_38",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Capcho Cristo y Ornos",
+      "cop_raw": 50.0,
+      "cop": 50000
+    },
+    {
+      "id": "base_39",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "campo C",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "base_40",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Chorro el Indio",
+      "cop_raw": 70.0,
+      "cop": 70000
+    },
+    {
+      "id": "base_41",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Cuesta el Trapiche",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_42",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Cilgara P/B",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_43",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Cilgara capilla",
+      "cop_raw": 28.0,
+      "cop": 28000
+    },
+    {
+      "id": "base_44",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Casa el Padre",
+      "cop_raw": 80.0,
+      "cop": 80000
+    },
+    {
+      "id": "base_45",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Curazao",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_46",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Concordia",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_47",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Cueva del oso",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_48",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "cruz roja",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_49",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Diamante 12P",
+      "cop_raw": 12.0,
+      "cop": 12000
+    },
+    {
+      "id": "base_50",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Diamant  La Victoria",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_51",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Torbes",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_52",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Torbes Salao",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_53",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Torbes Villa Sol",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_54",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Corozo",
+      "cop_raw": 40.0,
+      "cop": 40000
+    },
+    {
+      "id": "base_55",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Valle",
+      "cop_raw": 45.0,
+      "cop": 45000
+    },
+    {
+      "id": "base_56",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "EL Palmar Nuevo",
+      "cop_raw": 65.0,
+      "cop": 65000
+    },
+    {
+      "id": "base_57",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Palmar VIejo",
+      "cop_raw": 60.0,
+      "cop": 60000
+    },
+    {
+      "id": "base_58",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Tope Via Rubio",
+      "cop_raw": 35.0,
+      "cop": 35000
+    },
+    {
+      "id": "base_59",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Topon Pueblo A",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "base_60",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Vegon",
+      "cop_raw": 12.0,
+      "cop": 12000
+    },
+    {
+      "id": "base_61",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Mirador Alcabala",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_62",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "El Mirador Cement",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_63",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Estacion Palmira",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_64",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Granjas infantiles",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_65",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Hiranzo",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_66",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Hiranzo P/A",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_67",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Hospital Central",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_68",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Hospital Militar",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_69",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Junco 1er Matadero",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_70",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Junco 46",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_71",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Junco Paramo",
+      "cop_raw": 23.0,
+      "cop": 23000
+    },
+    {
+      "id": "base_72",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Junco Viejo",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_73",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Las Vegas",
+      "cop_raw": 10.0,
+      "cop": 10000
+    },
+    {
+      "id": "base_74",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Llanitos",
+      "cop_raw": 17.0,
+      "cop": 17000
+    },
+    {
+      "id": "base_75",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Loma de Pio",
+      "cop_raw": 40.0,
+      "cop": 40000
+    },
+    {
+      "id": "base_76",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Loma del Viento",
+      "cop_raw": 50.0,
+      "cop": 50000
+    },
+    {
+      "id": "base_77",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Lomas B. Parada B",
+      "cop_raw": 17.0,
+      "cop": 17000
+    },
+    {
+      "id": "base_78",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Lomas B. Flamingo",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_79",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "La Popa. Vereda 8",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_80",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Lagunilla Via rubio",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_81",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "La Blanca",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_82",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "La Aduana",
+      "cop_raw": 23.0,
+      "cop": 23000
+    },
+    {
+      "id": "base_83",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Laja Llanitos",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "base_84",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "La Laja P/A",
+      "cop_raw": 35.0,
+      "cop": 35000
+    },
+    {
+      "id": "base_85",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "La Victoria P/B",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_86",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "La Victoria P/A",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_87",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Las Lomas",
+      "cop_raw": 13.0,
+      "cop": 13000
+    },
+    {
+      "id": "base_88",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "La Laguna T-3 P/B",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_89",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "La Chucuri",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_90",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "La Tinta Escuela",
+      "cop_raw": 50.0,
+      "cop": 50000
+    },
+    {
+      "id": "base_91",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "la puente",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_92",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "la y",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_93",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Margaritas Policia",
+      "cop_raw": 10.0,
+      "cop": 10000
+    },
+    {
+      "id": "base_94",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Margaritas Carrascal",
+      "cop_raw": 12.0,
+      "cop": 12000
+    },
+    {
+      "id": "base_95",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Machiri Cruce",
+      "cop_raw": 12.0,
+      "cop": 12000
+    },
+    {
+      "id": "base_96",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Machiri P/A",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_97",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Mata de Guadua",
+      "cop_raw": 35.0,
+      "cop": 35000
+    },
+    {
+      "id": "base_98",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Murachi",
+      "cop_raw": 50.0,
+      "cop": 50000
+    },
+    {
+      "id": "base_99",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Monte Carmelo",
+      "cop_raw": 40.0,
+      "cop": 40000
+    },
+    {
+      "id": "base_100",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Palmira centro",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_101",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Patiecitos",
+      "cop_raw": 12.0,
+      "cop": 12000
+    },
+    {
+      "id": "base_102",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Palo grande",
+      "cop_raw": 35.0,
+      "cop": 35000
+    },
+    {
+      "id": "base_103",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Palo Gordo Toica",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_104",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Palo Gordo Elecha",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_105",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Peribeca Iglecia",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_106",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Pericos",
+      "cop_raw": 40.0,
+      "cop": 40000
+    },
+    {
+      "id": "base_107",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Pirineos I",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_108",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Pirineos II",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_109",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Policlinica Tachira",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_110",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Pueblo Nuevo",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_111",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Pueblo Chiquito",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_112",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Pueblo Ch. Galpon",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_113",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Romulo G. P/A",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_114",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Romulo G. P/B",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_115",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Rubio",
+      "cop_raw": 70.0,
+      "cop": 70000
+    },
+    {
+      "id": "base_116",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "San Josesito",
+      "cop_raw": 50.0,
+      "cop": 50000
+    },
+    {
+      "id": "base_117",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Santa Eduvigues l",
+      "cop_raw": 10.0,
+      "cop": 10000
+    },
+    {
+      "id": "base_118",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Santa Ana",
+      "cop_raw": 60.0,
+      "cop": 60000
+    },
+    {
+      "id": "base_119",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "San Rafael 46",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_120",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "San Rafael Cruce",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_121",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "San Rafael  Garcia",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_122",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Sabaneta T-6",
+      "cop_raw": 12.0,
+      "cop": 12000
+    },
+    {
+      "id": "base_123",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Sabaneta R-1",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_124",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Santa T.  Seguro",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_125",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Sambil",
+      "cop_raw": 13.0,
+      "cop": 13000
+    },
+    {
+      "id": "base_126",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Terminal",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_127",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Toituna",
+      "cop_raw": 22.0,
+      "cop": 22000
+    },
+    {
+      "id": "base_128",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Tucape P/A",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_129",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Tucape Bella Vista",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_130",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Tucape Matadero",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_131",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Unidad Vecinal",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_132",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Ucat Vieja",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_133",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Ucat Nueva",
+      "cop_raw": 15.0,
+      "cop": 15000
+    },
+    {
+      "id": "base_134",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Unet",
+      "cop_raw": 20.0,
+      "cop": 20000
+    },
+    {
+      "id": "base_135",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "ULA",
+      "cop_raw": 17.0,
+      "cop": 17000
+    },
+    {
+      "id": "base_136",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Vega de Aza",
+      "cop_raw": 60.0,
+      "cop": 60000
+    },
+    {
+      "id": "base_137",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Villa Chalet",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "base_138",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Zorca Providencia",
+      "cop_raw": 25.0,
+      "cop": 25000
+    },
+    {
+      "id": "base_139",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Zorca San Isidro",
+      "cop_raw": 27.0,
+      "cop": 27000
+    },
+    {
+      "id": "base_140",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Zorca Pie de Cuesta",
+      "cop_raw": 30.0,
+      "cop": 30000
+    },
+    {
+      "id": "base_141",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Zona ind.  Paramillo",
+      "cop_raw": 18.0,
+      "cop": 18000
+    },
+    {
+      "id": "base_142",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Zorca San Isidro",
+      "cop_raw": 27.0,
+      "cop": 27000
+    },
+    {
+      "id": "base_143",
+      "tipo": "base",
+      "origen": "Táriba",
+      "destino": "Zorca Pie de Cuesta",
+      "cop_raw": 30.0,
+      "cop": 30000
+    }
+  ],
+  "viajes_largos": [
+    {
+      "id": "largo_1",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "ABEJALES",
+      "usd": 65.0,
+      "cop": 247000
+    },
+    {
+      "id": "largo_2",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "ACARIGUA",
+      "usd": 220.0,
+      "cop": 836000
+    },
+    {
+      "id": "largo_3",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "ADICORA",
+      "usd": 450.0,
+      "cop": 1710000
+    },
+    {
+      "id": "largo_4",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "AGUAS CALIENTES",
+      "usd": 25.0,
+      "cop": 95000
+    },
+    {
+      "id": "largo_5",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "BARCELONA",
+      "usd": 650.0,
+      "cop": 2470000
+    },
+    {
+      "id": "largo_6",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "BARINITAS",
+      "usd": 180.0,
+      "cop": 684000
+    },
+    {
+      "id": "largo_7",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "BARINAS",
+      "usd": 150.0,
+      "cop": 570000
+    },
+    {
+      "id": "largo_8",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "BARQUISIMETO",
+      "usd": 250.0,
+      "cop": 950000
+    },
+    {
+      "id": "largo_9",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "BOBURES",
+      "usd": 250.0,
+      "cop": 950000
+    },
+    {
+      "id": "largo_10",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "CABIMAS",
+      "usd": 300.0,
+      "cop": 1140000
+    },
+    {
+      "id": "largo_11",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "CAJA SECA",
+      "usd": 150.0,
+      "cop": 570000
+    },
+    {
+      "id": "largo_12",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "CARACAS",
+      "usd": 400.0,
+      "cop": 1520000
+    },
+    {
+      "id": "largo_13",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "CASIGUA",
+      "usd": 60.0,
+      "cop": 228000
+    },
+    {
+      "id": "largo_14",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "COLON",
+      "usd": 25.0,
+      "cop": 95000
+    },
+    {
+      "id": "largo_15",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "COLONCITO",
+      "usd": 40.0,
+      "cop": 152000
+    },
+    {
+      "id": "largo_16",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "CHICHIRIVICHI",
+      "usd": 400.0,
+      "cop": 1520000
+    },
+    {
+      "id": "largo_17",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "CHURURU",
+      "usd": 25.0,
+      "cop": 95000
+    },
+    {
+      "id": "largo_18",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "CORO",
+      "usd": 400.0,
+      "cop": 1520000
+    },
+    {
+      "id": "largo_19",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "DELICIAS",
+      "usd": 50.0,
+      "cop": 190000
+    },
+    {
+      "id": "largo_20",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL COBRER",
+      "usd": 50.0,
+      "cop": 190000
+    },
+    {
+      "id": "largo_21",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL CANTON",
+      "usd": 90.0,
+      "cop": 342000
+    },
+    {
+      "id": "largo_22",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL FISCAL",
+      "usd": 15.0,
+      "cop": 57000
+    },
+    {
+      "id": "largo_23",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL GUAYABO",
+      "usd": 70.0,
+      "cop": 226000
+    },
+    {
+      "id": "largo_24",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL MILAGRO",
+      "usd": 50.0,
+      "cop": 190000
+    },
+    {
+      "id": "largo_25",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL NULA",
+      "usd": 50.0,
+      "cop": 190000
+    },
+    {
+      "id": "largo_26",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL PIÑAL",
+      "usd": 35.0,
+      "cop": 133000
+    },
+    {
+      "id": "largo_27",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL TOPACIO NARANJOS",
+      "usd": 30.0,
+      "cop": 114000
+    },
+    {
+      "id": "largo_28",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL VIGIA",
+      "usd": 90.0,
+      "cop": 342000
+    },
+    {
+      "id": "largo_29",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL ORZA",
+      "usd": 200.0,
+      "cop": 760000
+    },
+    {
+      "id": "largo_30",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL ZUMBADOR",
+      "usd": 35.0,
+      "cop": 133000
+    },
+    {
+      "id": "largo_31",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL AMPARO",
+      "usd": 250.0,
+      "cop": 950000
+    },
+    {
+      "id": "largo_32",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "EL TOPON",
+      "usd": 15.0,
+      "cop": 57000
+    },
+    {
+      "id": "largo_33",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "ENCONTRADOS",
+      "usd": 50.0,
+      "cop": 190000
+    },
+    {
+      "id": "largo_34",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "FUNDACION",
+      "usd": 35.0,
+      "cop": 133000
+    },
+    {
+      "id": "largo_35",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "GUANARE",
+      "usd": 200.0,
+      "cop": 760000
+    },
+    {
+      "id": "largo_36",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "GUASDALITO",
+      "usd": 150.0,
+      "cop": 570000
+    },
+    {
+      "id": "largo_37",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "ISNOTO",
+      "usd": 300.0,
+      "cop": 1140000
+    },
+    {
+      "id": "largo_38",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LOBATERA",
+      "usd": 17.0,
+      "cop": 65000
+    },
+    {
+      "id": "largo_39",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LA FRIA",
+      "usd": 35.0,
+      "cop": 135000
+    },
+    {
+      "id": "largo_40",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LA GRITA",
+      "usd": 55.0,
+      "cop": 210000
+    },
+    {
+      "id": "largo_41",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LA MULERA",
+      "usd": 20.0,
+      "cop": 76000
+    },
+    {
+      "id": "largo_42",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LA PEDRERA",
+      "usd": 70.0,
+      "cop": 265000
+    },
+    {
+      "id": "largo_43",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LA PETROLEA",
+      "usd": 70.0,
+      "cop": 265000
+    },
+    {
+      "id": "largo_44",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LAS DANTAS",
+      "usd": 25.0,
+      "cop": 95000
+    },
+    {
+      "id": "largo_45",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LAS MESA SEBORUCO",
+      "usd": 45.0,
+      "cop": 170000
+    },
+    {
+      "id": "largo_46",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LAS MINAS PALO GRANDE",
+      "usd": 25.0,
+      "cop": 95000
+    },
+    {
+      "id": "largo_47",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LAGUNILLAS MERIDA",
+      "usd": 120.0,
+      "cop": null
+    },
+    {
+      "id": "largo_48",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "LA TENDIDA",
+      "usd": 50.0,
+      "cop": 19000
+    },
+    {
+      "id": "largo_49",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "MARACAIBO",
+      "usd": 250.0,
+      "cop": 950000
+    },
+    {
+      "id": "largo_50",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "MERIDA",
+      "usd": 150.0,
+      "cop": 570000
+    },
+    {
+      "id": "largo_51",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "MESA DE AURA",
+      "usd": 30.0,
+      "cop": 115000
+    },
+    {
+      "id": "largo_52",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "MICHELENA",
+      "usd": 20.0,
+      "cop": 76000
+    },
+    {
+      "id": "largo_53",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "MARACAY",
+      "usd": 350.0,
+      "cop": 1330000
+    },
+    {
+      "id": "largo_54",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "PREGONERO",
+      "usd": 100.0,
+      "cop": 380000
+    },
+    {
+      "id": "largo_55",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "PUERTO LA CRUZ",
+      "usd": 650.0,
+      "cop": 2470000
+    },
+    {
+      "id": "largo_56",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "PUERTO VIVAS",
+      "usd": 50.0,
+      "cop": 190000
+    },
+    {
+      "id": "largo_57",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "PUNTO FIJO",
+      "usd": 400.0,
+      "cop": 1520000
+    },
+    {
+      "id": "largo_58",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "QUENIQUEA",
+      "usd": 65.0,
+      "cop": 247000
+    },
+    {
+      "id": "largo_59",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "REPRESA URIB CAPARO",
+      "usd": 100.0,
+      "cop": 380000
+    },
+    {
+      "id": "largo_60",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SEBOROCO",
+      "usd": 50.0,
+      "cop": 190000
+    },
+    {
+      "id": "largo_61",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SAN FERNADO DE APURE",
+      "usd": 400.0,
+      "cop": 1520000
+    },
+    {
+      "id": "largo_62",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SAN JUAQUIN DE NAVAY",
+      "usd": 50.0,
+      "cop": 190000
+    },
+    {
+      "id": "largo_63",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SAN PEDRO DEL RIO",
+      "usd": 25.0,
+      "cop": 95000
+    },
+    {
+      "id": "largo_64",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SAN FELIPE",
+      "usd": 350.0,
+      "cop": 1330000
+    },
+    {
+      "id": "largo_65",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SAN CARLOS",
+      "usd": 250.0,
+      "cop": 950000
+    },
+    {
+      "id": "largo_66",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SAN BARBARA BARINAS",
+      "usd": 80.0,
+      "cop": 305000
+    },
+    {
+      "id": "largo_67",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SAN SIMON",
+      "usd": 50.0,
+      "cop": 190000
+    },
+    {
+      "id": "largo_68",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SANTA BARBARA ZULIA",
+      "usd": 200.0,
+      "cop": 760000
+    },
+    {
+      "id": "largo_69",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SAN VICENTE REVANCHA",
+      "usd": 80.0,
+      "cop": 305000
+    },
+    {
+      "id": "largo_70",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "SAN JOSE DE BOLIVAR",
+      "usd": 70.0,
+      "cop": 266000
+    },
+    {
+      "id": "largo_71",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "TOVAR",
+      "usd": 120.0,
+      "cop": 456000
+    },
+    {
+      "id": "largo_72",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "TRUJILLO",
+      "usd": 300.0,
+      "cop": 1140000
+    },
+    {
+      "id": "largo_73",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "TUCACAS",
+      "usd": 400.0,
+      "cop": 1520000
+    },
+    {
+      "id": "largo_74",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "VALENCIA",
+      "usd": 350.0,
+      "cop": 1330000
+    },
+    {
+      "id": "largo_75",
+      "tipo": "largo",
+      "origen": "Táriba",
+      "destino": "VALERA",
+      "usd": 300.0,
+      "cop": 1140000
+    }
+  ]
+}
