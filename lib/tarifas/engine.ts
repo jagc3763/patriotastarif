@@ -16,6 +16,7 @@ import {
   SectorCoordenada,
   SugerenciaLugar,
   TarifasTachiraDB,
+  TelemetriaRutaMapa,
   TopografiaTachira,
   ViajeLargoItem,
 } from './types'
@@ -830,17 +831,44 @@ export function calcularTarifaPatriotas(
   destinoInput: string,
   parametros: ParametrosMotorTarifas = PARAMETROS_DEFAULT,
   opciones: OpcionesViaje = OPCIONES_VIAJE_DEFAULT,
-  customDb?: TarifasTachiraDB
+  customDb?: TarifasTachiraDB,
+  telemetriaMapa?: TelemetriaRutaMapa | null
 ): ResultadoCalculoTarifa {
   const db = customDb ?? obtenerDbSaneada()
 
   const origenLimpio = origenInput.trim() || 'Táriba'
   const destinoLimpio = destinoInput.trim() || 'Pueblo Nuevo'
 
-  const geoOrigen = detectarCoordenadasYTopografia(origenLimpio)
-  const geoDestino = detectarCoordenadasYTopografia(destinoLimpio)
+  const geoOrigenBase = detectarCoordenadasYTopografia(origenLimpio)
+  const geoDestinoBase = detectarCoordenadasYTopografia(destinoLimpio)
 
-  const distanciaRecogidaKm = calcularDistanciaVialKm(
+  const geoOrigen: SectorCoordenada = telemetriaMapa?.coordenadasOrigen
+    ? {
+        ...geoOrigenBase,
+        lat: telemetriaMapa.coordenadasOrigen.lat,
+        lon: telemetriaMapa.coordenadasOrigen.lon,
+        nombre:
+          geoOrigenBase.clave !== 'no_catalogado'
+            ? geoOrigenBase.nombre
+            : telemetriaMapa.coordenadasOrigen.direccionFormateada ||
+              geoOrigenBase.nombre,
+      }
+    : geoOrigenBase
+
+  const geoDestino: SectorCoordenada = telemetriaMapa?.coordenadasDestino
+    ? {
+        ...geoDestinoBase,
+        lat: telemetriaMapa.coordenadasDestino.lat,
+        lon: telemetriaMapa.coordenadasDestino.lon,
+        nombre:
+          geoDestinoBase.clave !== 'no_catalogado'
+            ? geoDestinoBase.nombre
+            : telemetriaMapa.coordenadasDestino.direccionFormateada ||
+              geoDestinoBase.nombre,
+      }
+    : geoDestinoBase
+
+  const distanciaRecogidaHaversine = calcularDistanciaVialKm(
     COORD_BASE_TARIBA.lat,
     COORD_BASE_TARIBA.lon,
     geoOrigen.lat,
@@ -848,13 +876,23 @@ export function calcularTarifaPatriotas(
     parametros.factorCurvasAndinas
   )
 
-  const distanciaVialKm = calcularDistanciaVialKm(
+  const distanciaVialHaversine = calcularDistanciaVialKm(
     geoOrigen.lat,
     geoOrigen.lon,
     geoDestino.lat,
     geoDestino.lon,
     parametros.factorCurvasAndinas
   )
+
+  const distanciaRecogidaKm =
+    telemetriaMapa && telemetriaMapa.distanciaTramo1RecogidaKm >= 0
+      ? telemetriaMapa.distanciaTramo1RecogidaKm
+      : distanciaRecogidaHaversine
+
+  const distanciaVialKm =
+    telemetriaMapa && telemetriaMapa.distanciaTramo2TrasladoKm > 0
+      ? telemetriaMapa.distanciaTramo2TrasladoKm
+      : distanciaVialHaversine
 
   // Velocidad promedio según topografía en Táchira (km/h)
   const jerarquiaTopo: Record<TopografiaTachira, number> = {
@@ -875,10 +913,10 @@ export function calcularTarifaPatriotas(
       ? 32
       : 45
 
-  const tiempoEstimadoMin = Math.max(
-    5,
-    Math.round((distanciaVialKm / velocidadPromedioKmH) * 60)
-  )
+  const tiempoEstimadoMin =
+    telemetriaMapa && telemetriaMapa.duracionTramo2TrasladoMin > 0
+      ? telemetriaMapa.duracionTramo2TrasladoMin
+      : Math.max(5, Math.round((distanciaVialKm / velocidadPromedioKmH) * 60))
 
   const matchOrigenDesdeBase = buscarPrecioDesdeTariba(
     origenLimpio,
@@ -1088,25 +1126,55 @@ export function calcularTarifaPatriotas(
         )
       } else if (anclaDest) {
         anclaDestinoUsada = anclaDest
-        // Si salimos desde Táriba Base Central, el traslado es directamente la tarifa inferida por el Ancla Oficial + delta km
-        if (esOrigenTaribaBase) {
-          tramo2TrasladoCop = anclaDest.tarifaInferidaPuntoCop
-          pasosRazonamiento.push(
-            `Destino "${destinoLimpio}" NO figura en el Excel. Se ancló a la tarifa oficial más cercana: "${anclaDest.nombreOficial}" (${anclaDest.copOficial.toLocaleString('es-CO')} COP en ${anclaDest.tipoTabla}), ubicada a ${anclaDest.distanciaAlPuntoKm} km viales.`,
-            `Ajuste por extensión vial y topografía ${geoDestino.tipo.toUpperCase()} (${costoPorKm.toLocaleString('es-CO')} COP/km): ${anclaDest.ajustePorDistanciaCop >= 0 ? '+' : ''}${anclaDest.ajustePorDistanciaCop.toLocaleString('es-CO')} COP → Base inferida: ${anclaDest.tarifaInferidaPuntoCop.toLocaleString('es-CO')} COP.`
+        // Si tenemos telemetría vial real del mapa (Google Maps / OSRM), ponderamos el ancla oficial con los km viales reales de la mejor ruta
+        const costoRutaVialDirecta = redondearTarifaTachira(
+          Math.round(
+            parametros.tarifaMinimaBaseCop +
+              Math.max(0, distanciaVialKm - parametros.kmIncluidosBase) *
+                costoPorKm
           )
+        )
+
+        if (esOrigenTaribaBase) {
+          if (telemetriaMapa && anclaDest.distanciaAlPuntoKm > 2.2) {
+            // Calibración híbrida: Ancla Oficial + ajuste exacto o ruta vial real medida en mapa
+            tramo2TrasladoCop = redondearTarifaTachira(
+              Math.round(
+                anclaDest.tarifaInferidaPuntoCop * 0.65 +
+                  costoRutaVialDirecta * 0.35
+              )
+            )
+            pasosRazonamiento.push(
+              `Ruta medida en mapa (${telemetriaMapa.proveedor === 'GOOGLE_MAPS' ? 'Google Maps Directions' : 'Ruteo Vial OSRM'}): ${distanciaVialKm} km (${tiempoEstimadoMin} min) por ${telemetriaMapa.resumenRutaPrincipal}.`,
+              `Calibración exacta con Ancla Oficial "${anclaDest.nombreOficial}" (${anclaDest.copOficial.toLocaleString('es-CO')} COP a ${anclaDest.distanciaAlPuntoKm} km) + kilometraje vial real → ${tramo2TrasladoCop.toLocaleString('es-CO')} COP.`
+            )
+          } else {
+            tramo2TrasladoCop = anclaDest.tarifaInferidaPuntoCop
+            pasosRazonamiento.push(
+              `Destino "${destinoLimpio}" NO figura en el Excel. Se ancló a la tarifa oficial más cercana: "${anclaDest.nombreOficial}" (${anclaDest.copOficial.toLocaleString('es-CO')} COP en ${anclaDest.tipoTabla}), ubicada a ${anclaDest.distanciaAlPuntoKm} km viales.`,
+              `Ajuste por extensión vial y topografía ${geoDestino.tipo.toUpperCase()} (${costoPorKm.toLocaleString('es-CO')} COP/km): ${anclaDest.ajustePorDistanciaCop >= 0 ? '+' : ''}${anclaDest.ajustePorDistanciaCop.toLocaleString('es-CO')} COP → Base inferida: ${anclaDest.tarifaInferidaPuntoCop.toLocaleString('es-CO')} COP.`
+            )
+          }
         } else {
           // Si ni el origen es Táriba ni el destino está en matriz:
-          // Comparamos la tarifa por ancla del destino con la distancia vial real Origen -> Destino
           const kmAdicionales = Math.max(0, distanciaVialKm - parametros.kmIncluidosBase)
           const costoTramoDirectoKm = Math.round(
             parametros.tarifaMinimaBaseCop + kmAdicionales * costoPorKm
           )
-          // Si Origen y Destino son cercanos dentro del mismo municipio/sector (< 4 km), ponderamos para no duplicar dos bases lejanas
           if (distanciaVialKm <= 4.5) {
             tramo2TrasladoCop = costoTramoDirectoKm
             pasosRazonamiento.push(
-              `Traslado corto intra-zonal (${distanciaVialKm} km entre "${sectorOrigenDetectado}" y "${sectorDestinoDetectado}"): se suma tramo vial de ${costoTramoDirectoKm.toLocaleString('es-CO')} COP sobre la recogida.`
+              `Traslado corto intra-zonal (${distanciaVialKm} km medidos en ruta entre "${sectorOrigenDetectado}" y "${sectorDestinoDetectado}"): se suma tramo vial de ${costoTramoDirectoKm.toLocaleString('es-CO')} COP sobre la recogida.`
+            )
+          } else if (telemetriaMapa) {
+            tramo2TrasladoCop = redondearTarifaTachira(
+              Math.round(
+                anclaDest.tarifaInferidaPuntoCop * 0.6 +
+                  costoTramoDirectoKm * 0.4
+              )
+            )
+            pasosRazonamiento.push(
+              `Mejor ruta en mapa (${distanciaVialKm} km · ${tiempoEstimadoMin} min por ${telemetriaMapa.resumenRutaPrincipal}) calibrada con Ancla "${anclaDest.nombreOficial}" (${anclaDest.copOficial.toLocaleString('es-CO')} COP) = ${tramo2TrasladoCop.toLocaleString('es-CO')} COP.`
             )
           } else {
             tramo2TrasladoCop = anclaDest.tarifaInferidaPuntoCop
@@ -1131,16 +1199,26 @@ export function calcularTarifaPatriotas(
       const fueReconocidoEnGeografia =
         geoOrigen.clave !== 'no_catalogado' && geoDestino.clave !== 'no_catalogado'
 
-      reglaAplicada = fueReconocidoEnGeografia
+      reglaAplicada = telemetriaMapa
+        ? 'RUTA_EXACTA_MAPA_VIAL'
+        : fueReconocidoEnGeografia
         ? 'INFERENCIA_ANCLA_VECINA'
         : 'ESTIMACION_TOPOGRAFICA_KM'
 
-      nivelConfianza = fueReconocidoEnGeografia
+      nivelConfianza = telemetriaMapa
+        ? 'IA_RUTEO_VIAL'
+        : fueReconocidoEnGeografia
         ? 'ALTA_ANCLA_VECINA'
         : 'MEDIA_TRIANGULACION'
-      porcentajeConfianza = fueReconocidoEnGeografia ? 92 : 78
+      porcentajeConfianza = telemetriaMapa
+        ? 97
+        : fueReconocidoEnGeografia
+        ? 92
+        : 78
 
-      tituloRegla = fueReconocidoEnGeografia
+      tituloRegla = telemetriaMapa
+        ? `Ruta Exacta en Mapa (${telemetriaMapa.proveedor === 'GOOGLE_MAPS' ? 'Google Maps' : 'Vial GPS'}) + Ancla Oficial`
+        : fueReconocidoEnGeografia
         ? 'Inferencia Inteligente por Ancla Tarifaria Vecina + Topografía'
         : 'Triangulación Topográfica por Kilometraje y Pendiente'
 
@@ -1238,6 +1316,7 @@ export function calcularTarifaPatriotas(
     anclasCercanasDestino,
     pasosRazonamiento,
     advertenciaCorreccion,
+    telemetriaMapa: telemetriaMapa ?? undefined,
   }
 }
 

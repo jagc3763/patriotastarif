@@ -11,6 +11,39 @@ export type ReglaAplicada =
   | 'INFERENCIA_ANCLA_VECINA'
   | 'ESTIMACION_TOPOGRAFICA_KM'
   | 'IA_GEORREFERENCIADA_OSRM'
+  | 'RUTA_EXACTA_MAPA_VIAL'
+
+export interface AlternativaRutaMapa {
+  indice: number
+  resumen: string
+  distanciaKm: number
+  duracionMin: number
+  geometria?: [number, number][]
+  esMejorRuta: boolean
+}
+
+export interface TelemetriaRutaMapa {
+  proveedor: 'GOOGLE_MAPS' | 'OSRM_VIAL'
+  distanciaTramo1RecogidaKm: number
+  duracionTramo1RecogidaMin: number
+  distanciaTramo2TrasladoKm: number
+  duracionTramo2TrasladoMin: number
+  resumenRutaPrincipal: string
+  coordenadasOrigen?: {
+    lat: number
+    lon: number
+    direccionFormateada?: string
+  }
+  coordenadasDestino?: {
+    lat: number
+    lon: number
+    direccionFormateada?: string
+  }
+  geometriaTramo1?: [number, number][]
+  geometriaTramo2?: [number, number][]
+  alternativas?: AlternativaRutaMapa[]
+  rutaSeleccionadaIndice?: number
+}
 
 export type NivelConfianzaTarifa =
   | 'OFICIAL_100'
@@ -140,6 +173,7 @@ export interface ResultadoCalculoTarifa {
   pasosRazonamiento: string[]
   advertenciaCorreccion?: string
   analisisIA?: AnalisisTarifarioIA
+  telemetriaMapa?: TelemetriaRutaMapa
 }
 
 export interface AnalisisTarifarioIA {
