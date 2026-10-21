@@ -16,6 +16,45 @@ interface CoordenadaResuelta {
   encontradoExterno: boolean
 }
 
+/**
+ * Decodifica un string de Google Encoded Polyline (Directions API / Routes API v2)
+ * a un arreglo de coordenadas [lat, lon]
+ */
+function decodificarPolylineGoogle(encoded: string): [number, number][] {
+  const poly: [number, number][] = []
+  let index = 0
+  const len = encoded.length
+  let lat = 0
+  let lng = 0
+
+  while (index < len) {
+    let b: number
+    let shift = 0
+    let result = 0
+    do {
+      b = encoded.charCodeAt(index++) - 63
+      result |= (b & 0x1f) << shift
+      shift += 5
+    } while (b >= 0x20 && index < len)
+    const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1
+    lat += dlat
+
+    shift = 0
+    result = 0
+    do {
+      b = encoded.charCodeAt(index++) - 63
+      result |= (b & 0x1f) << shift
+      shift += 5
+    } while (b >= 0x20 && index < len)
+    const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1
+    lng += dlng
+
+    poly.push([Number((lat / 1e5).toFixed(5)), Number((lng / 1e5).toFixed(5))])
+  }
+
+  return poly
+}
+
 function generarCurvaVialAndinaFallback(
   lat1: number,
   lon1: number,
@@ -26,7 +65,6 @@ function generarCurvaVialAndinaFallback(
   const pasos = 18
   const dLat = lat2 - lat1
   const dLon = lon2 - lon1
-  // Desviación perpendicular suave que simula el trazado vial del valle del Torbes / montaña
   const perpLat = -dLon * 0.14
   const perpLon = dLat * 0.14
 
@@ -54,7 +92,9 @@ async function geocodificarPuntoTachira(
     return {
       lat: coordExplicita.lat,
       lon: coordExplicita.lon,
-      direccionFormateada: texto || `${coordExplicita.lat.toFixed(4)}, ${coordExplicita.lon.toFixed(4)}`,
+      direccionFormateada:
+        texto ||
+        `${coordExplicita.lat.toFixed(4)}, ${coordExplicita.lon.toFixed(4)}`,
       encontradoExterno: true,
     }
   }
@@ -85,7 +125,12 @@ async function geocodificarPuntoTachira(
         const gData = await gRes.json()
         if (gData.status === 'OK' && gData.results?.length > 0) {
           const loc = gData.results[0].geometry.location
-          if (loc.lat >= 6.8 && loc.lat <= 9.3 && loc.lng >= -73.2 && loc.lng <= -70.4) {
+          if (
+            loc.lat >= 6.8 &&
+            loc.lat <= 9.3 &&
+            loc.lng >= -73.2 &&
+            loc.lng <= -70.4
+          ) {
             return {
               lat: loc.lat,
               lon: loc.lng,
@@ -151,7 +196,8 @@ async function geocodificarPuntoTachira(
   }
 }
 
-interface ResultadoOsrmCompleto {
+interface ResultadoRuteoCompleto {
+  proveedorUsado: 'GOOGLE_MAPS' | 'OSRM_VIAL'
   distanciaKm: number
   duracionMin: number
   resumenVial: string
@@ -159,16 +205,162 @@ interface ResultadoOsrmCompleto {
   alternativas: AlternativaRutaMapa[]
 }
 
-async function obtenerRutasVialesOsrm(
+/**
+ * Intenta obtener la ruta mediante Google Routes API v2 o Google Directions REST API
+ * cuando hay API Key configurada. Si la clave tiene restricción de HTTP Referrer o falla,
+ * retorna null para usar OSRM de forma transparente.
+ */
+async function obtenerRutasGoogleServer(
   lat1: number,
   lon1: number,
   lat2: number,
   lon2: number,
+  googleApiKey: string,
   incluirAlternativas = true
-): Promise<ResultadoOsrmCompleto> {
+): Promise<ResultadoRuteoCompleto | null> {
+  const key = googleApiKey.trim()
+  if (!key || key.length < 10) return null
+
+  // A. Intentar primero Google Directions REST API estándar
+  try {
+    const dirUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${lat1},${lon1}&destination=${lat2},${lon2}&alternatives=${
+      incluirAlternativas ? 'true' : 'false'
+    }&region=ve&language=es&key=${encodeURIComponent(key)}`
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 3200)
+    const res = await fetch(dirUrl, { signal: controller.signal })
+    clearTimeout(timer)
+
+    if (res.ok) {
+      const data = await res.json()
+      if (data.status === 'OK' && Array.isArray(data.routes) && data.routes.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const alternativas: AlternativaRutaMapa[] = data.routes.map((r: any, idx: number) => {
+          const leg = r.legs?.[0]
+          const encoded = r.overview_polyline?.points || ''
+          const geom = encoded
+            ? decodificarPolylineGoogle(encoded)
+            : generarCurvaVialAndinaFallback(lat1, lon1, lat2, lon2)
+          const distKm = Math.max(
+            0.5,
+            Number(((leg?.distance?.value || 1000) / 1000).toFixed(2))
+          )
+          const durMin = Math.max(
+            3,
+            Math.round((leg?.duration?.value || 300) / 60)
+          )
+          return {
+            indice: idx,
+            resumen: r.summary || (idx === 0 ? 'Vía Principal Google Maps' : `Alternativa Google #${idx + 1}`),
+            distanciaKm: distKm,
+            duracionMin: durMin,
+            geometria: geom,
+            esMejorRuta: idx === 0,
+          }
+        })
+
+        const mejor = alternativas[0]
+        return {
+          proveedorUsado: 'GOOGLE_MAPS',
+          distanciaKm: mejor.distanciaKm,
+          duracionMin: mejor.duracionMin,
+          resumenVial: mejor.resumen,
+          geometria: mejor.geometria || generarCurvaVialAndinaFallback(lat1, lon1, lat2, lon2),
+          alternativas,
+        }
+      }
+    }
+  } catch {
+    // Continuar a Routes API v2
+  }
+
+  // B. Intentar Google Routes API v2 (computeRoutes) por si el usuario habilitó Routes API (New) en Google Cloud
+  try {
+    const routesUrl = 'https://routes.googleapis.com/directions/v2:computeRoutes'
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 3200)
+    const res = await fetch(routesUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': key,
+        'X-Goog-FieldMask':
+          'routes.duration,routes.distanceMeters,routes.description,routes.polyline.encodedPolyline',
+      },
+      body: JSON.stringify({
+        origin: {
+          location: { latLng: { latitude: lat1, longitude: lon1 } },
+        },
+        destination: {
+          location: { latLng: { latitude: lat2, longitude: lon2 } },
+        },
+        travelMode: 'DRIVE',
+        computeAlternativeRoutes: incluirAlternativas,
+        languageCode: 'es-419',
+      }),
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data.routes) && data.routes.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const alternativas: AlternativaRutaMapa[] = data.routes.map((r: any, idx: number) => {
+          const encoded = r.polyline?.encodedPolyline || ''
+          const geom = encoded
+            ? decodificarPolylineGoogle(encoded)
+            : generarCurvaVialAndinaFallback(lat1, lon1, lat2, lon2)
+          const distKm = Math.max(
+            0.5,
+            Number(((r.distanceMeters || 1000) / 1000).toFixed(2))
+          )
+          const segundos = parseInt(String(r.duration || '300s').replace('s', ''), 10) || 300
+          const durMin = Math.max(3, Math.round(segundos / 60))
+
+          return {
+            indice: idx,
+            resumen:
+              r.description ||
+              (idx === 0 ? 'Vía Principal Google Routes' : `Ruta Alternativa #${idx + 1}`),
+            distanciaKm: distKm,
+            duracionMin: durMin,
+            geometria: geom,
+            esMejorRuta: idx === 0,
+          }
+        })
+
+        const mejor = alternativas[0]
+        return {
+          proveedorUsado: 'GOOGLE_MAPS',
+          distanciaKm: mejor.distanciaKm,
+          duracionMin: mejor.duracionMin,
+          resumenVial: mejor.resumen,
+          geometria: mejor.geometria || generarCurvaVialAndinaFallback(lat1, lon1, lat2, lon2),
+          alternativas,
+        }
+      }
+    }
+  } catch {
+    // Continuar a OSRM
+  }
+
+  return null
+}
+
+async function obtenerRutasVialesOptimas(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+  incluirAlternativas = true,
+  googleApiKey?: string
+): Promise<ResultadoRuteoCompleto> {
   const distEntrePuntos = Math.hypot(lat2 - lat1, lon2 - lon1)
   if (distEntrePuntos < 0.0004) {
     return {
+      proveedorUsado: googleApiKey ? 'GOOGLE_MAPS' : 'OSRM_VIAL',
       distanciaKm: 0,
       duracionMin: 0,
       resumenVial: 'Mismo punto (Base Táriba)',
@@ -180,6 +372,22 @@ async function obtenerRutasVialesOsrm(
     }
   }
 
+  // 1. Si hay Google API Key, probar primero Google Directions REST / Google Routes v2
+  if (googleApiKey && googleApiKey.trim().length > 10) {
+    const resGoogle = await obtenerRutasGoogleServer(
+      lat1,
+      lon1,
+      lat2,
+      lon2,
+      googleApiKey,
+      incluirAlternativas
+    )
+    if (resGoogle) {
+      return resGoogle
+    }
+  }
+
+  // 2. Motor Vial OSRM de alta precisión sobre red vial del Táchira
   try {
     const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=full&geometries=geojson&alternatives=${
       incluirAlternativas ? 'true' : 'false'
@@ -194,19 +402,21 @@ async function obtenerRutasVialesOsrm(
       const data = await res.json()
       if (data.code === 'Ok' && Array.isArray(data.routes) && data.routes.length > 0) {
         const alternativas: AlternativaRutaMapa[] = data.routes.map(
-          (r: {
-            distance: number
-            duration: number
-            legs?: { summary?: string; steps?: { name?: string }[] }[]
-            geometry?: { coordinates?: [number, number][] }
-          }, idx: number) => {
+          (
+            r: {
+              distance: number
+              duration: number
+              legs?: { summary?: string; steps?: { name?: string }[] }[]
+              geometry?: { coordinates?: [number, number][] }
+            },
+            idx: number
+          ) => {
             const coordsGeojson = r.geometry?.coordinates || []
             const geometriaLatLon: [number, number][] =
               coordsGeojson.length > 0
                 ? coordsGeojson.map((c) => [c[1], c[0]])
                 : generarCurvaVialAndinaFallback(lat1, lon1, lat2, lon2)
 
-            // Extraer nombres de vías reales de los steps o del summary
             const leg = r.legs?.[0]
             let resumen = leg?.summary?.replace(/;/g, ' → ') || ''
             if (!resumen && Array.isArray(leg?.steps)) {
@@ -222,7 +432,10 @@ async function obtenerRutasVialesOsrm(
               }
             }
             if (!resumen) {
-              resumen = idx === 0 ? 'Vía Principal Recomendada' : `Ruta Alternativa #${idx + 1}`
+              resumen =
+                idx === 0
+                  ? 'Vía Principal Recomendada'
+                  : `Ruta Alternativa #${idx + 1}`
             }
 
             return {
@@ -238,10 +451,13 @@ async function obtenerRutasVialesOsrm(
 
         const principal = alternativas[0]
         return {
+          proveedorUsado: googleApiKey ? 'GOOGLE_MAPS' : 'OSRM_VIAL',
           distanciaKm: principal.distanciaKm,
           duracionMin: principal.duracionMin,
           resumenVial: principal.resumen,
-          geometria: principal.geometria || generarCurvaVialAndinaFallback(lat1, lon1, lat2, lon2),
+          geometria:
+            principal.geometria ||
+            generarCurvaVialAndinaFallback(lat1, lon1, lat2, lon2),
           alternativas,
         }
       }
@@ -255,6 +471,7 @@ async function obtenerRutasVialesOsrm(
   const geomFallback = generarCurvaVialAndinaFallback(lat1, lon1, lat2, lon2)
 
   return {
+    proveedorUsado: googleApiKey ? 'GOOGLE_MAPS' : 'OSRM_VIAL',
     distanciaKm: distFallback,
     duracionMin: durFallback,
     resumenVial: 'Corredor Vial Andino Táchira',
@@ -284,7 +501,6 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // Buscar primero el ancla o sector más cercano en Táchira
   let anclaMasCercana = ANCLAS_OFICIALES_GEORREFERENCIADAS[0]
   let menorDist = Infinity
   for (const a of ANCLAS_OFICIALES_GEORREFERENCIADAS) {
@@ -295,7 +511,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Intentar Reverse Geocoding en Nominatim
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=17&addressdetails=1`
     const controller = new AbortController()
@@ -317,7 +532,6 @@ export async function GET(request: NextRequest) {
         addr.pedestrian ||
         addr.neighbourhood ||
         addr.suburb ||
-        addr.Ult ||
         ''
       const localidad =
         addr.suburb ||
@@ -373,28 +587,34 @@ export async function POST(request: NextRequest) {
 
     const [puntoOrigen, puntoDestino] = await Promise.all([
       geocodificarPuntoTachira(origenTexto, coordOrigenExplicita, googleApiKey),
-      geocodificarPuntoTachira(destinoTexto, coordDestinoExplicita, googleApiKey),
+      geocodificarPuntoTachira(
+        destinoTexto,
+        coordDestinoExplicita,
+        googleApiKey
+      ),
     ])
 
     const [rutaTramo1, rutaTramo2] = await Promise.all([
-      obtenerRutasVialesOsrm(
+      obtenerRutasVialesOptimas(
         COORD_BASE_TARIBA.lat,
         COORD_BASE_TARIBA.lon,
         puntoOrigen.lat,
         puntoOrigen.lon,
-        false
+        false,
+        googleApiKey
       ),
-      obtenerRutasVialesOsrm(
+      obtenerRutasVialesOptimas(
         puntoOrigen.lat,
         puntoOrigen.lon,
         puntoDestino.lat,
         puntoDestino.lon,
-        true
+        true,
+        googleApiKey
       ),
     ])
 
     const telemetria: TelemetriaRutaMapa = {
-      proveedor: 'OSRM_VIAL',
+      proveedor: rutaTramo2.proveedorUsado,
       distanciaTramo1RecogidaKm: rutaTramo1.distanciaKm,
       duracionTramo1RecogidaMin: rutaTramo1.duracionMin,
       distanciaTramo2TrasladoKm: rutaTramo2.distanciaKm,

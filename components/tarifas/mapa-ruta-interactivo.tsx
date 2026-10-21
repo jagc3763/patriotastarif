@@ -46,6 +46,7 @@ declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     google?: any
+    gm_authFailure?: () => void
   }
 }
 
@@ -72,12 +73,19 @@ export function MapaRutaInteractivo({
   const [motorMapa, setMotorMapa] = useState<'google' | 'osm_vial'>(
     envGoogleKey ? 'google' : 'osm_vial'
   )
-  const [estiloCapaOsm, setEstiloCapaOsm] = useState<'oscuro' | 'calles' | 'topografico'>('calles')
-  const [modoClicMapa, setModoClicMapa] = useState<'ninguno' | 'origen' | 'destino'>('ninguno')
+  const [estiloCapaOsm, setEstiloCapaOsm] = useState<
+    'oscuro' | 'calles' | 'topografico'
+  >('calles')
+  const [modoClicMapa, setModoClicMapa] = useState<
+    'ninguno' | 'origen' | 'destino'
+  >('ninguno')
 
   const [cargandoRuta, setCargandoRuta] = useState<boolean>(false)
   const [errorGoogleSdk, setErrorGoogleSdk] = useState<string | null>(null)
   const [googleSdkListo, setGoogleSdkListo] = useState<boolean>(false)
+  const [modoTrazadoGoogle, setModoTrazadoGoogle] = useState<
+    'directions_native' | 'polyline_vial'
+  >('polyline_vial')
 
   // Coordenadas explícitas cuando el usuario hace clic o arrastra un marcador en el mapa
   const [coordExplicitaOrigen, setCoordExplicitaOrigen] = useState<{
@@ -91,6 +99,21 @@ export function MapaRutaInteractivo({
 
   const ultimoOrigenTextoRef = useRef<string>(origen)
   const ultimoDestinoTextoRef = useRef<string>(destino)
+
+  // Recuperar API Key de la sesión si el usuario ya la había ingresado
+  useEffect(() => {
+    if (envGoogleKey) return
+    try {
+      const guardada = window.sessionStorage.getItem('patriotas_gmaps_key')
+      if (guardada && guardada.trim().length > 10) {
+        setGoogleApiKeyInput(guardada.trim())
+        setGoogleApiKeyActiva(guardada.trim())
+        setMotorMapa('google')
+      }
+    } catch {
+      // Ignorar si sessionStorage no está disponible
+    }
+  }, [envGoogleKey])
 
   // Si el usuario escribe otro lugar distinto en el buscador, limpiamos la coordenada explícita de pin manual
   useEffect(() => {
@@ -121,14 +144,28 @@ export function MapaRutaInteractivo({
     modoClicRef.current = modoClicMapa
   }, [modoClicMapa])
 
-  // Referencias para Google Maps JS SDK Oficial
+  // Referencias para Google Maps JS SDK Oficial y sus capas de ruta
   const googleMapContainerRef = useRef<HTMLDivElement | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const googleMapInstanceRef = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const googleDirectionsRendererRef = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const googleTramo1LineRef = useRef<any>(null)
+  const googleOverlaysRef = useRef<any[]>([])
+  const directionsLegacyDenegadoRef = useRef<boolean>(false)
+
+  const limpiarOverlaysGoogle = useCallback(() => {
+    if (googleOverlaysRef.current.length > 0) {
+      googleOverlaysRef.current.forEach((ov) => {
+        try {
+          ov.setMap(null)
+        } catch {
+          // Ignorar
+        }
+      })
+      googleOverlaysRef.current = []
+    }
+  }, [])
 
   // Resolver un clic o arrastre en el mapa a nombre de calle/sector en Táchira
   const manejarPinEnMapa = useCallback(
@@ -177,7 +214,8 @@ export function MapaRutaInteractivo({
     [onSeleccionarPuntoEnMapa]
   )
 
-  // 1. Consultar la ruta vial exacta desde nuestro endpoint (/api/tarifas/ruta-mapa)
+  // 1. Consultar SIEMPRE la ruta vial exacta desde nuestro endpoint (/api/tarifas/ruta-mapa)
+  // Soporta Google Directions REST, Google Routes API v2 y OSRM Vial con geometría completa
   useEffect(() => {
     let cancelado = false
     const timer = setTimeout(async () => {
@@ -197,17 +235,14 @@ export function MapaRutaInteractivo({
         })
         const data = await res.json()
         if (!cancelado && data.ok && data.telemetria) {
-          // Si estamos en modo Google Maps y Google Directions ya calculó, no sobreescribimos salvo que estemos en modo OSM
-          if (motorMapa === 'osm_vial' || !googleSdkListo) {
-            onChangeTelemetria(data.telemetria)
-          }
+          onChangeTelemetria(data.telemetria)
         }
       } catch {
         // Silencioso, usa fallback del motor
       } finally {
         if (!cancelado) setCargandoRuta(false)
       }
-    }, 260)
+    }, 240)
 
     return () => {
       cancelado = true
@@ -219,14 +254,20 @@ export function MapaRutaInteractivo({
     coordExplicitaOrigen,
     coordExplicitaDestino,
     googleApiKeyActiva,
-    motorMapa,
-    googleSdkListo,
     onChangeTelemetria,
   ])
 
   // 2. Cargar Google Maps JavaScript SDK cuando el usuario activa su API Key
   useEffect(() => {
     if (motorMapa !== 'google' || !googleApiKeyActiva) return
+
+    window.gm_authFailure = () => {
+      setErrorGoogleSdk(
+        'Tu API Key de Google Maps requiere habilitar "Maps JavaScript API" o facturación en Google Cloud. Cambiando al Mapa Vial Gratuito.'
+      )
+      setGoogleSdkListo(false)
+      setMotorMapa('osm_vial')
+    }
 
     if (typeof window !== 'undefined' && window.google?.maps) {
       setGoogleSdkListo(true)
@@ -239,6 +280,7 @@ export function MapaRutaInteractivo({
       existingScript.remove()
     }
 
+    directionsLegacyDenegadoRef.current = false
     setErrorGoogleSdk(null)
     const script = document.createElement('script')
     script.id = 'google-maps-sdk-script'
@@ -269,7 +311,18 @@ export function MapaRutaInteractivo({
     document.head.appendChild(script)
   }, [motorMapa, googleApiKeyActiva])
 
-  // 3. Renderizar y trazar la Mejor Ruta en Google Maps Oficial cuando está activo
+  // Limpiar instancia de Google Maps si se cambia de motor
+  useEffect(() => {
+    if (motorMapa !== 'google') {
+      limpiarOverlaysGoogle()
+      googleMapInstanceRef.current = null
+      googleDirectionsRendererRef.current = null
+    }
+  }, [motorMapa, limpiarOverlaysGoogle])
+
+  // 3. Renderizar el Mapa Oficial de Google Maps y trazar la Mejor Ruta sobre él
+  // Si DirectionsService (Legacy) responde REQUEST_DENIED (común en proyectos nuevos de Google Cloud sin Legacy Billing o con Routes API v2),
+  // dibuja automáticamente la ruta vial exacta y los pines interactivos A / B directamente sobre el lienzo de Google Maps sin errores.
   useEffect(() => {
     if (
       motorMapa !== 'google' ||
@@ -304,7 +357,7 @@ export function MapaRutaInteractivo({
         },
       })
 
-      // Permitir clic en el mapa de Google para fijar origen o destino
+      // Permitir clic en cualquier calle del mapa de Google para fijar origen o destino
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       googleMapInstanceRef.current.addListener('click', (e: any) => {
         if (!e.latLng) return
@@ -314,7 +367,7 @@ export function MapaRutaInteractivo({
       })
     }
 
-    const directionsService = new gmaps.DirectionsService()
+    const map = googleMapInstanceRef.current
     const origLat =
       coordExplicitaOrigen?.lat ??
       telemetriaActual?.coordenadasOrigen?.lat ??
@@ -332,97 +385,265 @@ export function MapaRutaInteractivo({
       telemetriaActual?.coordenadasDestino?.lon ??
       coordenadasDestino.lon
 
-    setCargandoRuta(true)
+    // Función que dibuja la ruta vial exacta directamente sobre el mapa de Google Maps (Polylines + Markers arrastrables)
+    const dibujarRutaVialSobreGoogleMap = () => {
+      setModoTrazadoGoogle('polyline_vial')
+      setErrorGoogleSdk(null)
 
-    directionsService.route(
-      {
-        origin: { lat: origLat, lng: origLon },
-        destination: { lat: destLat, lng: destLon },
-        travelMode: gmaps.TravelMode.DRIVING,
-        provideRouteAlternatives: true,
-        region: 'VE',
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (result: any, status: string) => {
-        setCargandoRuta(false)
-        if (status === 'OK' && result?.routes?.length > 0) {
-          googleDirectionsRendererRef.current?.setDirections(result)
+      if (googleDirectionsRendererRef.current) {
+        googleDirectionsRendererRef.current.setMap(null)
+      }
+      limpiarOverlaysGoogle()
 
-          // Dibujar línea punteada desde Base Táriba hasta el punto de recogida si no sale de Táriba
-          if (googleTramo1LineRef.current) {
-            googleTramo1LineRef.current.setMap(null)
+      const indiceSeleccionado = telemetriaActual?.rutaSeleccionadaIndice ?? 0
+
+      // A. Rutas alternativas en gris sobre Google Maps
+      if (
+        telemetriaActual?.alternativas &&
+        telemetriaActual.alternativas.length > 1
+      ) {
+        telemetriaActual.alternativas.forEach((alt) => {
+          if (alt.indice !== indiceSeleccionado && alt.geometria?.length) {
+            const pathAlt = alt.geometria.map((c) => ({
+              lat: c[0],
+              lng: c[1],
+            }))
+            const polyAlt = new gmaps.Polyline({
+              path: pathAlt,
+              geodesic: true,
+              strokeColor: '#64748b',
+              strokeOpacity: 0.65,
+              strokeWeight: 5,
+              map,
+            })
+            polyAlt.addListener('click', () => {
+              if (!telemetriaActual) return
+              onChangeTelemetria({
+                ...telemetriaActual,
+                proveedor: 'GOOGLE_MAPS',
+                distanciaTramo2TrasladoKm: alt.distanciaKm,
+                duracionTramo2TrasladoMin: alt.duracionMin,
+                resumenRutaPrincipal: alt.resumen,
+                geometriaTramo2: alt.geometria,
+                rutaSeleccionadaIndice: alt.indice,
+              })
+            })
+            googleOverlaysRef.current.push(polyAlt)
           }
-          const distBaseAOrig = Math.hypot(
-            origLat - COORD_BASE_TARIBA.lat,
-            origLon - COORD_BASE_TARIBA.lon
-          )
-          if (distBaseAOrig > 0.002) {
-            googleTramo1LineRef.current = new gmaps.Polyline({
-              path: [
+        })
+      }
+
+      // B. Tramo 1 (Despacho desde Base Central Táriba hasta Punto de Partida A)
+      const distBaseAOrig = Math.hypot(
+        origLat - COORD_BASE_TARIBA.lat,
+        origLon - COORD_BASE_TARIBA.lon
+      )
+      if (distBaseAOrig > 0.0025) {
+        const coordsTramo1 =
+          telemetriaActual?.geometriaTramo1 &&
+          telemetriaActual.geometriaTramo1.length > 1
+            ? telemetriaActual.geometriaTramo1.map((c) => ({
+                lat: c[0],
+                lng: c[1],
+              }))
+            : [
                 { lat: COORD_BASE_TARIBA.lat, lng: COORD_BASE_TARIBA.lon },
                 { lat: origLat, lng: origLon },
-              ],
-              geodesic: true,
-              strokeColor: '#f59e0b',
-              strokeOpacity: 0.85,
-              strokeWeight: 4,
-              map: googleMapInstanceRef.current,
-            })
-          }
+              ]
 
-          // Extraer todas las alternativas de Google Maps Directions y actualizar la tarifa
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const alternativasGoogle: AlternativaRutaMapa[] = result.routes.map(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (r: any, idx: number) => {
-              const leg = r.legs?.[0]
-              const distKm = Number(((leg?.distance?.value || 1000) / 1000).toFixed(2))
-              const durMin = Math.max(
-                3,
-                Math.round((leg?.duration?.value || 300) / 60)
-              )
-              return {
-                indice: idx,
-                resumen: r.summary || `Ruta Google Maps #${idx + 1}`,
-                distanciaKm: distKm,
-                duracionMin: durMin,
-                esMejorRuta: idx === 0,
-              }
-            }
-          )
-
-          const mejor = alternativasGoogle[0]
-          const leg0 = result.routes[0]?.legs?.[0]
-
-          onChangeTelemetria({
-            proveedor: 'GOOGLE_MAPS',
-            distanciaTramo1RecogidaKm:
-              telemetriaActual?.distanciaTramo1RecogidaKm ?? 0,
-            duracionTramo1RecogidaMin:
-              telemetriaActual?.duracionTramo1RecogidaMin ?? 0,
-            distanciaTramo2TrasladoKm: mejor.distanciaKm,
-            duracionTramo2TrasladoMin: mejor.duracionMin,
-            resumenRutaPrincipal: mejor.resumen,
-            coordenadasOrigen: {
-              lat: origLat,
-              lon: origLon,
-              direccionFormateada: leg0?.start_address || origen,
-            },
-            coordenadasDestino: {
-              lat: destLat,
-              lon: destLon,
-              direccionFormateada: leg0?.end_address || destino,
-            },
-            alternativas: alternativasGoogle,
-            rutaSeleccionadaIndice: 0,
-          })
-        } else {
-          setErrorGoogleSdk(
-            `Google Directions respondió "${status}". Verifica que Directions API esté habilitada en tu Google Cloud Console.`
-          )
-        }
+        const lineTramo1 = new gmaps.Polyline({
+          path: coordsTramo1,
+          geodesic: true,
+          strokeColor: '#f59e0b',
+          strokeOpacity: 0.85,
+          strokeWeight: 4,
+          map,
+        })
+        googleOverlaysRef.current.push(lineTramo1)
       }
-    )
+
+      // C. Tramo 2: Mejor Ruta desde Punto de Partida (A) hasta Punto de Llegada (B)
+      const coordsTramo2 =
+        telemetriaActual?.geometriaTramo2 &&
+        telemetriaActual.geometriaTramo2.length > 1
+          ? telemetriaActual.geometriaTramo2.map((c) => ({
+              lat: c[0],
+              lng: c[1],
+            }))
+          : [
+              { lat: origLat, lng: origLon },
+              { lat: destLat, lng: destLon },
+            ]
+
+      const polyBorde = new gmaps.Polyline({
+        path: coordsTramo2,
+        geodesic: true,
+        strokeColor: '#064e3b',
+        strokeOpacity: 0.8,
+        strokeWeight: 9,
+        map,
+      })
+      const polyPrincipal = new gmaps.Polyline({
+        path: coordsTramo2,
+        geodesic: true,
+        strokeColor: '#10b981',
+        strokeOpacity: 1,
+        strokeWeight: 5,
+        map,
+      })
+      googleOverlaysRef.current.push(polyBorde, polyPrincipal)
+
+      // D. Marcador Base Táriba
+      const markerBase = new gmaps.Marker({
+        position: { lat: COORD_BASE_TARIBA.lat, lng: COORD_BASE_TARIBA.lon },
+        map,
+        title: 'Base Central Línea Los Patriotas (Táriba)',
+        label: {
+          text: 'BASE',
+          color: '#0f172a',
+          fontWeight: 'bold',
+          fontSize: '10px',
+        },
+      })
+      googleOverlaysRef.current.push(markerBase)
+
+      // E. Marcador Punto de Partida (A) - Arrastrable
+      const markerA = new gmaps.Marker({
+        position: { lat: origLat, lng: origLon },
+        map,
+        draggable: true,
+        title: `Punto de Partida (A): ${origen}`,
+        label: {
+          text: 'A',
+          color: '#ffffff',
+          fontWeight: 'bold',
+        },
+      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      markerA.addListener('dragend', (ev: any) => {
+        if (!ev.latLng) return
+        manejarPinEnMapa('origen', ev.latLng.lat(), ev.latLng.lng())
+      })
+      googleOverlaysRef.current.push(markerA)
+
+      // F. Marcador Punto de Llegada (B) - Arrastrable
+      const markerB = new gmaps.Marker({
+        position: { lat: destLat, lng: destLon },
+        map,
+        draggable: true,
+        title: `Punto de Llegada (B): ${destino} (${totalCop.toLocaleString('es-CO')} COP)`,
+        label: {
+          text: 'B',
+          color: '#ffffff',
+          fontWeight: 'bold',
+        },
+      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      markerB.addListener('dragend', (ev: any) => {
+        if (!ev.latLng) return
+        manejarPinEnMapa('destino', ev.latLng.lat(), ev.latLng.lng())
+      })
+      googleOverlaysRef.current.push(markerB)
+
+      // G. Marcador de Ancla Oficial si aplica
+      if (!esOficial && anclaDestino) {
+        const markerAncla = new gmaps.Marker({
+          position: {
+            lat: anclaDestino.coordenadas.lat,
+            lng: anclaDestino.coordenadas.lon,
+          },
+          map,
+          title: `Ancla Oficial: ${anclaDestino.nombreOficial} (${anclaDestino.copOficial.toLocaleString('es-CO')} COP)`,
+          label: {
+            text: '⚓',
+            color: '#ffffff',
+            fontSize: '11px',
+          },
+        })
+        const lineAncla = new gmaps.Polyline({
+          path: [
+            {
+              lat: anclaDestino.coordenadas.lat,
+              lng: anclaDestino.coordenadas.lon,
+            },
+            { lat: destLat, lng: destLon },
+          ],
+          geodesic: true,
+          strokeColor: '#a855f7',
+          strokeOpacity: 0.75,
+          strokeWeight: 3,
+          map,
+        })
+        googleOverlaysRef.current.push(markerAncla, lineAncla)
+      }
+
+      // H. Ajustar encuadre del mapa de Google para mostrar toda la ruta
+      const bounds = new gmaps.LatLngBounds()
+      coordsTramo2.forEach((pt) => bounds.extend(pt))
+      bounds.extend({ lat: origLat, lng: origLon })
+      bounds.extend({ lat: destLat, lng: destLon })
+      if (distBaseAOrig > 0.0025) {
+        bounds.extend({
+          lat: COORD_BASE_TARIBA.lat,
+          lng: COORD_BASE_TARIBA.lon,
+        })
+      }
+      map.fitBounds(bounds)
+    }
+
+    // Dibujar de inmediato la ruta vial disponible sobre Google Maps para respuesta instantánea
+    dibujarRutaVialSobreGoogleMap()
+
+    // Además, consultar DirectionsService del navegador solo si no ha devuelto REQUEST_DENIED previamente
+    if (!directionsLegacyDenegadoRef.current) {
+      try {
+        const directionsService = new gmaps.DirectionsService()
+        directionsService.route(
+          {
+            origin: { lat: origLat, lng: origLon },
+            destination: { lat: destLat, lng: destLon },
+            travelMode: gmaps.TravelMode.DRIVING,
+            provideRouteAlternatives: true,
+            region: 'VE',
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (result: any, status: string) => {
+            if (status === 'OK' && result?.routes?.length > 0) {
+              setModoTrazadoGoogle('directions_native')
+              setErrorGoogleSdk(null)
+              limpiarOverlaysGoogle()
+              googleDirectionsRendererRef.current?.setMap(map)
+              googleDirectionsRendererRef.current?.setDirections(result)
+
+              const distBaseAOrig = Math.hypot(
+                origLat - COORD_BASE_TARIBA.lat,
+                origLon - COORD_BASE_TARIBA.lon
+              )
+              if (distBaseAOrig > 0.0025) {
+                const lineTramo1 = new gmaps.Polyline({
+                  path: [
+                    { lat: COORD_BASE_TARIBA.lat, lng: COORD_BASE_TARIBA.lon },
+                    { lat: origLat, lng: origLon },
+                  ],
+                  geodesic: true,
+                  strokeColor: '#f59e0b',
+                  strokeOpacity: 0.85,
+                  strokeWeight: 4,
+                  map,
+                })
+                googleOverlaysRef.current.push(lineTramo1)
+              }
+            } else if (status === 'REQUEST_DENIED') {
+              // Google Cloud tiene habilitado Maps JS / Routes API v2 o restringe Legacy DirectionsService en navegador:
+              // mantenemos el trazado de polilínea vial sobre el mapa oficial de Google sin mostrar error ni reintentar DirectionsService legacy.
+              directionsLegacyDenegadoRef.current = true
+            }
+          }
+        )
+      } catch {
+        // Ya está dibujada la ruta vial sobre Google Maps
+      }
+    }
   }, [
     motorMapa,
     googleSdkListo,
@@ -434,14 +655,13 @@ export function MapaRutaInteractivo({
     coordenadasDestino.lon,
     coordExplicitaOrigen,
     coordExplicitaDestino,
+    telemetriaActual,
+    anclaDestino,
+    totalCop,
+    esOficial,
     manejarPinEnMapa,
     onChangeTelemetria,
-    telemetriaActual?.coordenadasDestino?.lat,
-    telemetriaActual?.coordenadasDestino?.lon,
-    telemetriaActual?.coordenadasOrigen?.lat,
-    telemetriaActual?.coordenadasOrigen?.lon,
-    telemetriaActual?.distanciaTramo1RecogidaKm,
-    telemetriaActual?.duracionTramo1RecogidaMin,
+    limpiarOverlaysGoogle,
   ])
 
   // 4. Inicializar y actualizar el Mapa Vial Interactivo (Leaflet + OSM + OSRM)
@@ -578,7 +798,6 @@ export function MapaRutaInteractivo({
               [destLat, destLon],
             ]
 
-      // Borde exterior de la mejor ruta para alto contraste
       L.polyline(coordsTramo2, {
         color: '#064e3b',
         weight: 9,
@@ -773,6 +992,12 @@ export function MapaRutaInteractivo({
   const activarGoogleMapsConKey = () => {
     const limpia = googleApiKeyInput.trim()
     if (!limpia) return
+    try {
+      window.sessionStorage.setItem('patriotas_gmaps_key', limpia)
+    } catch {
+      // Ignorar
+    }
+    setErrorGoogleSdk(null)
     setGoogleApiKeyActiva(limpia)
     setMotorMapa('google')
     setMostrarConfigKey(false)
@@ -801,7 +1026,9 @@ export function MapaRutaInteractivo({
                   <>
                     <CheckCircle2 className="h-3 w-3" />
                     {motorMapa === 'google' && googleSdkListo
-                      ? 'Google Maps Directions Activo'
+                      ? modoTrazadoGoogle === 'directions_native'
+                        ? 'Google Maps Directions Activo'
+                        : 'Google Maps Activo + Trazado Vial Exacto'
                       : 'Ruteo Vial GPS OSRM Activo'}
                   </>
                 )}
@@ -862,7 +1089,9 @@ export function MapaRutaInteractivo({
           >
             <KeyRound className="h-3.5 w-3.5" />
             <span>
-              {googleApiKeyActiva ? 'API Key Google Conectada' : 'Conectar tu Google API Key'}
+              {googleApiKeyActiva
+                ? 'API Key Google Conectada'
+                : 'Conectar tu Google API Key'}
             </span>
           </button>
 
@@ -886,13 +1115,14 @@ export function MapaRutaInteractivo({
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
                 <KeyRound className="h-3.5 w-3.5" />
-                Configura tu Google Maps API Key (Capa Gratuita de Google Cloud)
+                Configura tu Google Maps API Key (Google Cloud)
               </h4>
               <p className="text-[11px] text-slate-300 mt-0.5">
-                Pega tu clave <code className="text-amber-300 font-mono">AIzaSy...</code> aquí para activar el renderizado nativo de{' '}
-                <strong>Google Maps + DirectionsService + Places</strong>, o agrégala en la sección{' '}
-                <strong>Vars</strong> (arriba a la derecha) como{' '}
-                <code className="text-emerald-300 font-mono">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code>.
+                Compatible con <strong>Maps JavaScript API</strong>,{' '}
+                <strong>Routes API (New)</strong> y{' '}
+                <strong>Directions API</strong>. Incluso si Google Cloud restringe{' '}
+                <code className="text-amber-300 font-mono">DirectionsService</code>{' '}
+                legacy en el navegador, el sistema dibuja automáticamente la polilínea vial exacta sobre tu lienzo de Google Maps.
               </p>
             </div>
           </div>
@@ -934,6 +1164,11 @@ export function MapaRutaInteractivo({
               <button
                 type="button"
                 onClick={() => {
+                  try {
+                    window.sessionStorage.removeItem('patriotas_gmaps_key')
+                  } catch {
+                    // Ignorar
+                  }
                   setGoogleApiKeyActiva('')
                   setGoogleApiKeyInput('')
                   setMotorMapa('osm_vial')
@@ -947,7 +1182,7 @@ export function MapaRutaInteractivo({
         </div>
       )}
 
-      {/* AVISO SI GOOGLE MAPS SDK DEVOLVIÓ ERROR DE KEY O PERMISOS */}
+      {/* AVISO SI LA KEY NO PUDO CARGAR EL LIENZO BASE DE GOOGLE MAPS JS */}
       {errorGoogleSdk && motorMapa === 'google' && (
         <div className="px-4 py-2.5 bg-rose-950/60 border-b border-rose-500/30 flex flex-wrap items-center justify-between gap-2 text-xs text-rose-200">
           <div className="flex items-center gap-2">
@@ -1076,7 +1311,8 @@ export function MapaRutaInteractivo({
             <div className="flex items-center gap-2">
               <span className="inline-block h-0.5 w-6 border-b-2 border-dashed border-purple-400" />
               <span className="text-purple-200">
-                Ancla Oficial Vecina: <strong>{anclaDestino.nombreOficial}</strong> (
+                Ancla Oficial Vecina:{' '}
+                <strong>{anclaDestino.nombreOficial}</strong> (
                 {anclaDestino.copOficial.toLocaleString('es-CO')} COP)
               </span>
             </div>
