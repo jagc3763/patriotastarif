@@ -11,6 +11,7 @@ import {
   OpcionesViaje,
   ParametrosMotorTarifas,
   TarifasTachiraDB,
+  TelemetriaRutaMapa,
 } from '@/lib/tarifas/types'
 import { CotizadorInteligente } from '@/components/tarifas/cotizador-inteligente'
 import { ReglasParametrosPanel } from '@/components/tarifas/reglas-parametros-panel'
@@ -38,10 +39,19 @@ export default function ModuloTarifasPatriotasPage() {
 
   const [origen, setOrigen] = useState('Táriba')
   const [destino, setDestino] = useState('Pueblo Nuevo')
+  const [telemetriaMapa, setTelemetriaMapa] =
+    useState<TelemetriaRutaMapa | null>(null)
 
   const resultadoActual = useMemo(() => {
-    return calcularTarifaPatriotas(origen, destino, parametros, opciones, db)
-  }, [origen, destino, parametros, opciones, db])
+    return calcularTarifaPatriotas(
+      origen,
+      destino,
+      parametros,
+      opciones,
+      db,
+      telemetriaMapa
+    )
+  }, [origen, destino, parametros, opciones, db, telemetriaMapa])
 
   const totalRutasRegistradas =
     db.rutas_base.length + db.combinaciones.length + db.viajes_largos.length
@@ -254,6 +264,8 @@ export default function ModuloTarifasPatriotasPage() {
             parametros={parametros}
             resultado={resultadoActual}
             db={db}
+            telemetriaMapa={telemetriaMapa}
+            onChangeTelemetriaMapa={setTelemetriaMapa}
           />
         )}
 

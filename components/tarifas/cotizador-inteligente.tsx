@@ -6,8 +6,10 @@ import {
   ParametrosMotorTarifas,
   ResultadoCalculoTarifa,
   TarifasTachiraDB,
+  TelemetriaRutaMapa,
 } from '@/lib/tarifas/types'
 import { buscarSugerenciasLugares } from '@/lib/tarifas/engine'
+import { MapaRutaInteractivo } from './mapa-ruta-interactivo'
 import {
   MapPin,
   Navigation,
@@ -44,6 +46,8 @@ interface CotizadorInteligenteProps {
   parametros: ParametrosMotorTarifas
   resultado: ResultadoCalculoTarifa
   db: TarifasTachiraDB
+  telemetriaMapa: TelemetriaRutaMapa | null
+  onChangeTelemetriaMapa: (nueva: TelemetriaRutaMapa | null) => void
 }
 
 const CASOS_PRUEBA_OFICIALES = [
@@ -140,6 +144,8 @@ export function CotizadorInteligente({
   parametros,
   resultado: resultadoLocal,
   db,
+  telemetriaMapa,
+  onChangeTelemetriaMapa,
 }: CotizadorInteligenteProps) {
   const [focoInput, setFocoInput] = useState<'origen' | 'destino' | null>(null)
   const [copiadoWhatsapp, setCopiadoWhatsapp] = useState(false)
@@ -243,13 +249,20 @@ export function CotizadorInteligente({
       ? `\n*Ancla Oficial Referencia:* ${resultado.anclaDestinoUsada.nombreOficial} (${resultado.anclaDestinoUsada.copOficial.toLocaleString('es-CO')} COP a ${resultado.anclaDestinoUsada.distanciaAlPuntoKm} km)`
       : ''
 
+    const lineaViaOptima = resultado.telemetriaMapa?.resumenRutaPrincipal
+      ? `\n*Mejor Ruta Vial:* ${resultado.telemetriaMapa.resumenRutaPrincipal}`
+      : ''
+
+    const linkGoogleMaps = `https://www.google.com/maps/dir/?api=1&origin=${resultado.coordenadasOrigen.lat},${resultado.coordenadasOrigen.lon}&destination=${resultado.coordenadasDestino.lat},${resultado.coordenadasDestino.lon}&travelmode=driving`
+
     const texto = [
       `*LÍNEA DE TAXIS LOS PATRIOTAS (TÁCHIRA)*`,
       `*Recogida:* ${resultado.origenInput} (${resultado.sectorOrigenDetectado})`,
       `*Destino:* ${resultado.destinoInput} (${resultado.sectorDestinoDetectado})`,
-      `*Distancia Vial:* ~${resultado.distanciaVialKm} km (~${resultado.tiempoEstimadoMin} min)`,
+      `*Distancia Vial:* ~${resultado.distanciaVialKm} km (~${resultado.tiempoEstimadoMin} min)${lineaViaOptima}`,
       `*Método:* ${resultado.tituloRegla} (Confianza ${resultado.porcentajeConfianza}%)${lineaAncla}`,
       `*Detalle:* ${resultado.detalleExplicacion}${lineaRecargos}`,
+      `*Ruta Google Maps:* ${linkGoogleMaps}`,
       `--------------------------------`,
       `*TOTAL EN PESOS:* ${resultado.totalCop.toLocaleString('es-CO')} COP`,
       !resultado.esOficial
@@ -901,6 +914,19 @@ export function CotizadorInteligente({
                 </span>
               )}
             </div>
+
+            {resultado.telemetriaMapa?.resumenRutaPrincipal && (
+              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px]">
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <Route className="h-3.5 w-3.5" />
+                  Mejor Ruta en Mapa:
+                </span>
+                <span className="text-slate-200 font-semibold truncate">
+                  {resultado.telemetriaMapa.resumenRutaPrincipal} (
+                  {resultado.distanciaVialKm} km · ~{resultado.tiempoEstimadoMin} min)
+                </span>
+              </div>
+            )}
           </div>
 
           {/* MONTO PRINCIPAL EN PESOS COLOMBIANOS (COP) */}
@@ -1121,6 +1147,26 @@ export function CotizadorInteligente({
           </div>
         </div>
       </div>
+
+      {/* MAPA INTERACTIVO DE MEJOR RUTA (GOOGLE MAPS CON TU API KEY + MAPA VIAL OSRM GRATUITO) */}
+      <MapaRutaInteractivo
+        origen={origen}
+        destino={destino}
+        coordenadasOrigen={resultado.coordenadasOrigen}
+        coordenadasDestino={resultado.coordenadasDestino}
+        anclaDestino={resultado.anclaDestinoUsada}
+        totalCop={resultado.totalCop}
+        esOficial={resultado.esOficial}
+        telemetriaActual={telemetriaMapa}
+        onChangeTelemetria={onChangeTelemetriaMapa}
+        onSeleccionarPuntoEnMapa={(tipo, nombreLugar) => {
+          if (tipo === 'origen') {
+            onChangeOrigen(nombreLugar)
+          } else {
+            onChangeDestino(nombreLugar)
+          }
+        }}
+      />
     </div>
   )
 }
