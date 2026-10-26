@@ -1,7 +1,9 @@
 import {
+  AnclaAprendidaItem,
   AnclaTarifariaReferencia,
   ParametrosMotorTarifas,
   SectorCoordenada,
+  TarifasTachiraDB,
   TopografiaTachira,
 } from './types'
 
@@ -933,12 +935,22 @@ export function distanciaHaversineKm(
   return R * c
 }
 
+function normalizarClaveAncla(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
 export function encontrarAnclasTarifariasCercanas(
   lat: number,
   lon: number,
   topografiaPunto: TopografiaTachira,
   parametros: ParametrosMotorTarifas,
-  k = 3
+  k = 3,
+  anclasAprendidas?: AnclaAprendidaItem[],
+  db?: TarifasTachiraDB
 ): AnclaTarifariaReferencia[] {
   const distTaribaAlPuntoVial =
     distanciaHaversineKm(COORD_BASE_TARIBA.lat, COORD_BASE_TARIBA.lon, lat, lon) *
@@ -953,7 +965,75 @@ export function encontrarAnclasTarifariasCercanas(
       ? parametros.costoKmTroncal
       : parametros.costoKmUrbano
 
-  const candidatos = ANCLAS_OFICIALES_GEORREFERENCIADAS.map((ancla) => {
+  // Construir catálogo unificado de anclas oficiales + precios actualizados en DB + anclas entrenadas
+  const mapaPreciosDb = new Map<string, number>()
+  if (db) {
+    for (const r of db.rutas_base) {
+      mapaPreciosDb.set(normalizarClaveAncla(r.destino), r.cop)
+    }
+    for (const l of db.viajes_largos) {
+      if (l.cop) {
+        mapaPreciosDb.set(normalizarClaveAncla(l.destino), l.cop)
+      }
+    }
+  }
+
+  const mapaAprendidas = new Map<string, AnclaAprendidaItem>()
+  if (anclasAprendidas) {
+    for (const a of anclasAprendidas) {
+      mapaAprendidas.set(normalizarClaveAncla(a.nombreOficial), a)
+    }
+  }
+
+  const nodosUnificados: Array<{
+    nombreOficial: string
+    copOficial: number
+    tipoTabla: AnclaTarifariaReferencia['tipoTabla']
+    lat: number
+    lon: number
+    esEntrenada?: boolean
+  }> = []
+
+  const nombresYaIncluidos = new Set<string>()
+
+  for (const oficial of ANCLAS_OFICIALES_GEORREFERENCIADAS) {
+    const claveNorm = normalizarClaveAncla(oficial.nombreOficial)
+    const aprendida = mapaAprendidas.get(claveNorm)
+    const copEnDb = mapaPreciosDb.get(claveNorm)
+
+    const copVigente = aprendida
+      ? aprendida.copOficial
+      : copEnDb ?? oficial.copOficial
+
+    nodosUnificados.push({
+      nombreOficial: oficial.nombreOficial,
+      copOficial: copVigente,
+      tipoTabla: aprendida ? 'Ancla Entrenada' : oficial.tipoTabla,
+      lat: aprendida ? aprendida.lat : oficial.lat,
+      lon: aprendida ? aprendida.lon : oficial.lon,
+      esEntrenada: Boolean(aprendida || (copEnDb && copEnDb !== oficial.copOficial)),
+    })
+    nombresYaIncluidos.add(claveNorm)
+  }
+
+  if (anclasAprendidas) {
+    for (const aprendida of anclasAprendidas) {
+      const claveNorm = normalizarClaveAncla(aprendida.nombreOficial)
+      if (!nombresYaIncluidos.has(claveNorm)) {
+        nodosUnificados.push({
+          nombreOficial: aprendida.nombreOficial,
+          copOficial: aprendida.copOficial,
+          tipoTabla: 'Ancla Entrenada',
+          lat: aprendida.lat,
+          lon: aprendida.lon,
+          esEntrenada: true,
+        })
+        nombresYaIncluidos.add(claveNorm)
+      }
+    }
+  }
+
+  const candidatos = nodosUnificados.map((ancla) => {
     const distLinealAnclaAlPunto = distanciaHaversineKm(
       ancla.lat,
       ancla.lon,
@@ -1000,6 +1080,7 @@ export function encontrarAnclasTarifariasCercanas(
       ajustePorDistanciaCop: ajusteRedondeado,
       tarifaInferidaPuntoCop,
       coordenadas: { lat: ancla.lat, lon: ancla.lon },
+      esEntrenada: ancla.esEntrenada,
     } satisfies AnclaTarifariaReferencia
   })
 

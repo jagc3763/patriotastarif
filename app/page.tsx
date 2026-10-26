@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   calcularTarifaPatriotas,
   obtenerDbSaneada,
@@ -8,6 +8,12 @@ import {
   PARAMETROS_DEFAULT,
 } from '@/lib/tarifas/engine'
 import {
+  ESTADO_APRENDIZAJE_INICIAL,
+  procesarEntrenamientoTarifa,
+} from '@/lib/tarifas/aprendizaje'
+import {
+  EstadoAprendizajeMotor,
+  ModoAprendizajeTarifa,
   OpcionesViaje,
   ParametrosMotorTarifas,
   TarifasTachiraDB,
@@ -17,6 +23,7 @@ import { CotizadorInteligente } from '@/components/tarifas/cotizador-inteligente
 import { ReglasParametrosPanel } from '@/components/tarifas/reglas-parametros-panel'
 import { CatalogoMatrizPanel } from '@/components/tarifas/catalogo-matriz-panel'
 import { AuditoriaCodigoPanel } from '@/components/tarifas/auditoria-codigo-panel'
+import { EntrenamientoPanel } from '@/components/tarifas/entrenamiento-panel'
 import {
   CarTaxiFront,
   Calculator,
@@ -25,22 +32,71 @@ import {
   ShieldAlert,
   Coins,
   MapPin,
+  BrainCircuit,
 } from 'lucide-react'
 
-type TabPrincipal = 'cotizador' | 'reglas' | 'catalogo' | 'auditoria'
+type TabPrincipal =
+  | 'cotizador'
+  | 'entrenamiento'
+  | 'reglas'
+  | 'catalogo'
+  | 'auditoria'
 
 export default function ModuloTarifasPatriotasPage() {
   const [tabActiva, setTabActiva] = useState<TabPrincipal>('cotizador')
+  const dbOriginal = useMemo(() => obtenerDbSaneada(), [])
   const [db, setDb] = useState<TarifasTachiraDB>(() => obtenerDbSaneada())
   const [parametros, setParametros] = useState<ParametrosMotorTarifas>(
     PARAMETROS_DEFAULT
   )
+  const [estadoAprendizaje, setEstadoAprendizaje] =
+    useState<EstadoAprendizajeMotor>(ESTADO_APRENDIZAJE_INICIAL)
   const [opciones, setOpciones] = useState<OpcionesViaje>(OPCIONES_VIAJE_DEFAULT)
 
   const [origen, setOrigen] = useState('Táriba')
   const [destino, setDestino] = useState('Pueblo Nuevo')
   const [telemetriaMapa, setTelemetriaMapa] =
     useState<TelemetriaRutaMapa | null>(null)
+
+  // Cargar memoria de entrenamiento persistida en el servidor al iniciar
+  useEffect(() => {
+    let cancelado = false
+    fetch('/api/tarifas/entrenamiento')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelado && data?.ok) {
+          if (data.parametros) setParametros(data.parametros)
+          if (data.estadoAprendizaje)
+            setEstadoAprendizaje(data.estadoAprendizaje)
+          if (data.db) setDb(data.db)
+        }
+      })
+      .catch(() => {
+        // Mantiene estado inicial si hay error de red
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [])
+
+  const persistirEnServidor = useCallback(
+    (
+      nuevosParams: ParametrosMotorTarifas,
+      nuevoAprendizaje: EstadoAprendizajeMotor,
+      nuevoDb: TarifasTachiraDB
+    ) => {
+      fetch('/api/tarifas/entrenamiento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parametros: nuevosParams,
+          estadoAprendizaje: nuevoAprendizaje,
+          db: nuevoDb,
+        }),
+      }).catch(() => {})
+    },
+    []
+  )
 
   const resultadoActual = useMemo(() => {
     return calcularTarifaPatriotas(
@@ -49,9 +105,18 @@ export default function ModuloTarifasPatriotasPage() {
       parametros,
       opciones,
       db,
-      telemetriaMapa
+      telemetriaMapa,
+      estadoAprendizaje
     )
-  }, [origen, destino, parametros, opciones, db, telemetriaMapa])
+  }, [
+    origen,
+    destino,
+    parametros,
+    opciones,
+    db,
+    telemetriaMapa,
+    estadoAprendizaje,
+  ])
 
   const totalRutasRegistradas =
     db.rutas_base.length + db.combinaciones.length + db.viajes_largos.length
@@ -62,6 +127,95 @@ export default function ModuloTarifasPatriotasPage() {
     setTabActiva('cotizador')
   }
 
+  const manejarEntrenarPrecio = useCallback(
+    (params: {
+      origen: string
+      destino: string
+      nuevoTotalCop: number
+      modoAprendizaje: ModoAprendizajeTarifa
+      propagarCorredorVecino: boolean
+    }) => {
+      const resultadoBaseParaEntrenar = calcularTarifaPatriotas(
+        params.origen,
+        params.destino,
+        parametros,
+        opciones,
+        db,
+        params.origen === origen && params.destino === destino
+          ? telemetriaMapa
+          : null,
+        estadoAprendizaje
+      )
+
+      const ejecutado = procesarEntrenamientoTarifa({
+        resultadoActual: resultadoBaseParaEntrenar,
+        nuevoTotalCop: params.nuevoTotalCop,
+        parametrosActuales: parametros,
+        opcionesActuales: opciones,
+        dbActual: db,
+        estadoAprendizajeActual: estadoAprendizaje,
+        modoAprendizaje: params.modoAprendizaje,
+        propagarCorredorVecino: params.propagarCorredorVecino,
+      })
+
+      setDb(ejecutado.nuevoDb)
+      setParametros(ejecutado.nuevosParametros)
+      setEstadoAprendizaje(ejecutado.nuevoEstadoAprendizaje)
+      persistirEnServidor(
+        ejecutado.nuevosParametros,
+        ejecutado.nuevoEstadoAprendizaje,
+        ejecutado.nuevoDb
+      )
+    },
+    [
+      parametros,
+      opciones,
+      db,
+      origen,
+      destino,
+      telemetriaMapa,
+      estadoAprendizaje,
+      persistirEnServidor,
+    ]
+  )
+
+  const manejarCambiarAlpha = (nuevoAlpha: number) => {
+    const actualizado: EstadoAprendizajeMotor = {
+      ...estadoAprendizaje,
+      tasaAprendizajeAlpha: nuevoAlpha,
+    }
+    setEstadoAprendizaje(actualizado)
+    persistirEnServidor(parametros, actualizado, db)
+  }
+
+  const manejarEliminarLeccion = (idLeccion: string) => {
+    const restantes = estadoAprendizaje.lecciones.filter(
+      (l) => l.id !== idLeccion
+    )
+    if (restantes.length === 0) {
+      manejarRestaurarFabrica()
+      return
+    }
+    const actualizado: EstadoAprendizajeMotor = {
+      ...estadoAprendizaje,
+      lecciones: restantes,
+    }
+    setEstadoAprendizaje(actualizado)
+    persistirEnServidor(parametros, actualizado, db)
+  }
+
+  const manejarRestaurarFabrica = () => {
+    const dbLimpia = obtenerDbSaneada()
+    setDb(dbLimpia)
+    setParametros(PARAMETROS_DEFAULT)
+    setEstadoAprendizaje(ESTADO_APRENDIZAJE_INICIAL)
+    fetch('/api/tarifas/entrenamiento', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accion: 'reset' }),
+    }).catch(() => {})
+  }
+
   const manejarAgregarRutaCustom = (nueva: {
     categoria: 'base' | 'combinacion' | 'largo'
     origen: string
@@ -69,54 +223,13 @@ export default function ModuloTarifasPatriotasPage() {
     cop: number
     usd?: number
   }) => {
-    setDb((prev) => {
-      if (nueva.categoria === 'base') {
-        return {
-          ...prev,
-          rutas_base: [
-            {
-              id: `base_custom_${Date.now()}`,
-              tipo: 'base',
-              origen: 'Táriba',
-              destino: nueva.destino,
-              cop_raw: Number((nueva.cop / 1000).toFixed(1)),
-              cop: nueva.cop,
-            },
-            ...prev.rutas_base,
-          ],
-        }
-      }
-      if (nueva.categoria === 'combinacion') {
-        return {
-          ...prev,
-          combinaciones: [
-            {
-              id: `comb_custom_${Date.now()}`,
-              tipo: 'combinacion',
-              raw: `${nueva.origen}/${nueva.destino}`,
-              origen: nueva.origen,
-              destino: nueva.destino,
-              cop_raw: Number((nueva.cop / 1000).toFixed(1)),
-              cop: nueva.cop,
-            },
-            ...prev.combinaciones,
-          ],
-        }
-      }
-      return {
-        ...prev,
-        viajes_largos: [
-          {
-            id: `largo_custom_${Date.now()}`,
-            tipo: 'largo',
-            origen: 'Táriba',
-            destino: nueva.destino.toUpperCase(),
-            usd: nueva.usd ?? Number((nueva.cop / parametros.tasaCopPorUsd).toFixed(2)),
-            cop: nueva.cop,
-          },
-          ...prev.viajes_largos,
-        ],
-      }
+    // Al agregar o modificar desde el catálogo, también entrenamos el sistema
+    manejarEntrenarPrecio({
+      origen: nueva.categoria === 'combinacion' ? nueva.origen : 'Táriba',
+      destino: nueva.destino,
+      nuevoTotalCop: nueva.cop,
+      modoAprendizaje: 'completo',
+      propagarCorredorVecino: false,
     })
   }
 
@@ -130,16 +243,22 @@ export default function ModuloTarifasPatriotasPage() {
               <CarTaxiFront className="h-6 w-6 stroke-[2.2]" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-lg sm:text-xl font-black tracking-tight text-white">
                   Línea Los Patriotas
                 </h1>
                 <span className="rounded-full bg-amber-400/15 border border-amber-400/30 px-2.5 py-0.5 text-[11px] font-bold text-amber-400">
                   Base Central Táriba • Táchira
                 </span>
+                {estadoAprendizaje.lecciones.length > 0 && (
+                  <span className="rounded-full bg-emerald-500/15 border border-emerald-400/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+                    <BrainCircuit className="h-3 w-3" />
+                    {estadoAprendizaje.lecciones.length} lecciones aprendidas
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-400">
-                Módulo de Tarifas Trimonetario (COP / USD / BCV) y Motor de Despacho Radial ({totalRutasRegistradas} rutas activas)
+                Módulo de Tarifas Trimonetario (COP / USD / BCV) con Aprendizaje Adaptativo ({totalRutasRegistradas} rutas activas)
               </p>
             </div>
           </div>
@@ -155,12 +274,14 @@ export default function ModuloTarifasPatriotasPage() {
                   aria-label="Tasa Pesos por Dólar"
                   step={50}
                   value={parametros.tasaCopPorUsd}
-                  onChange={(e) =>
-                    setParametros({
+                  onChange={(e) => {
+                    const nuevos = {
                       ...parametros,
                       tasaCopPorUsd: Number(e.target.value) || 3800,
-                    })
-                  }
+                    }
+                    setParametros(nuevos)
+                    persistirEnServidor(nuevos, estadoAprendizaje, db)
+                  }}
                   className="w-16 bg-transparent text-center font-bold text-amber-400 focus:outline-none"
                 />
                 <span className="text-[10px] font-bold text-slate-400 ml-1">
@@ -179,12 +300,14 @@ export default function ModuloTarifasPatriotasPage() {
                   aria-label="Tasa Bolívares BCV por Dólar"
                   step={0.5}
                   value={parametros.tasaBcvPorUsd}
-                  onChange={(e) =>
-                    setParametros({
+                  onChange={(e) => {
+                    const nuevos = {
                       ...parametros,
                       tasaBcvPorUsd: Number(e.target.value) || 45,
-                    })
-                  }
+                    }
+                    setParametros(nuevos)
+                    persistirEnServidor(nuevos, estadoAprendizaje, db)
+                  }}
                   className="w-14 bg-transparent text-center font-bold text-emerald-400 focus:outline-none"
                 />
                 <span className="text-[10px] font-bold text-slate-400 ml-1">
@@ -212,6 +335,21 @@ export default function ModuloTarifasPatriotasPage() {
 
           <button
             type="button"
+            onClick={() => setTabActiva('entrenamiento')}
+            className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-all ${
+              tabActiva === 'entrenamiento'
+                ? 'border-emerald-400 text-emerald-300 bg-emerald-400/10'
+                : 'border-transparent text-emerald-400/80 hover:text-emerald-300'
+            }`}
+          >
+            <BrainCircuit className="h-4 w-4" />
+            <span>
+              Entrenamiento y Aprendizaje ({estadoAprendizaje.lecciones.length})
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setTabActiva('reglas')}
             className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-all ${
               tabActiva === 'reglas'
@@ -220,7 +358,7 @@ export default function ModuloTarifasPatriotasPage() {
             }`}
           >
             <Sliders className="h-4 w-4" />
-            <span>Reglas Predefinidas y Parámetros Topográficos</span>
+            <span>Reglas y Parámetros Topográficos</span>
           </button>
 
           <button
@@ -246,7 +384,7 @@ export default function ModuloTarifasPatriotasPage() {
             }`}
           >
             <ShieldAlert className="h-4 w-4 text-emerald-400" />
-            <span>Auditoría de tus Archivos (.py / .json) y API</span>
+            <span>Auditoría de Archivos (.py / .json) y API</span>
           </button>
         </div>
       </header>
@@ -266,13 +404,35 @@ export default function ModuloTarifasPatriotasPage() {
             db={db}
             telemetriaMapa={telemetriaMapa}
             onChangeTelemetriaMapa={setTelemetriaMapa}
+            estadoAprendizaje={estadoAprendizaje}
+            onEntrenarPrecio={manejarEntrenarPrecio}
+            onIrAlLaboratorioEntrenamiento={() =>
+              setTabActiva('entrenamiento')
+            }
+          />
+        )}
+
+        {tabActiva === 'entrenamiento' && (
+          <EntrenamientoPanel
+            db={db}
+            dbOriginal={dbOriginal}
+            parametros={parametros}
+            estadoAprendizaje={estadoAprendizaje}
+            onAplicarEntrenamiento={manejarEntrenarPrecio}
+            onCambiarAlpha={manejarCambiarAlpha}
+            onEliminarLeccion={manejarEliminarLeccion}
+            onRestaurarFabrica={manejarRestaurarFabrica}
+            onProbarEnCotizador={manejarProbarRuta}
           />
         )}
 
         {tabActiva === 'reglas' && (
           <ReglasParametrosPanel
             parametros={parametros}
-            onChangeParametros={setParametros}
+            onChangeParametros={(nuevos) => {
+              setParametros(nuevos)
+              persistirEnServidor(nuevos, estadoAprendizaje, db)
+            }}
             resultadoActual={resultadoActual}
           />
         )}
@@ -283,6 +443,15 @@ export default function ModuloTarifasPatriotasPage() {
             parametros={parametros}
             onProbarRuta={manejarProbarRuta}
             onAgregarRutaCustom={manejarAgregarRutaCustom}
+            onEntrenarRutaDesdeCatalogo={(orig, dest, nuevoCop) =>
+              manejarEntrenarPrecio({
+                origen: orig,
+                destino: dest,
+                nuevoTotalCop: nuevoCop,
+                modoAprendizaje: 'completo',
+                propagarCorredorVecino: true,
+              })
+            }
           />
         )}
 
@@ -299,7 +468,7 @@ export default function ModuloTarifasPatriotasPage() {
             Línea de Taxis <strong>Los Patriotas</strong> — Estado Táchira, Venezuela. Base Central: <strong>Táriba</strong>.
           </span>
           <span className="text-slate-500">
-            Motor de Tarifas v2.0 • 141 Rutas Base + 54 Combinaciones + 75 Viajes Largos
+            Motor de Tarifas Adaptativo v2.5 • {totalRutasRegistradas} Rutas + {estadoAprendizaje.lecciones.length} Lecciones Aprendidas
           </span>
         </div>
       </footer>

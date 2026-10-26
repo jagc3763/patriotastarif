@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import {
+  EstadoAprendizajeMotor,
+  ModoAprendizajeTarifa,
   OpcionesViaje,
   ParametrosMotorTarifas,
   ResultadoCalculoTarifa,
@@ -9,6 +11,7 @@ import {
   TelemetriaRutaMapa,
 } from '@/lib/tarifas/types'
 import { buscarSugerenciasLugares } from '@/lib/tarifas/engine'
+import { procesarEntrenamientoTarifa } from '@/lib/tarifas/aprendizaje'
 import { MapaRutaInteractivo } from './mapa-ruta-interactivo'
 import {
   MapPin,
@@ -48,6 +51,15 @@ interface CotizadorInteligenteProps {
   db: TarifasTachiraDB
   telemetriaMapa: TelemetriaRutaMapa | null
   onChangeTelemetriaMapa: (nueva: TelemetriaRutaMapa | null) => void
+  estadoAprendizaje: EstadoAprendizajeMotor
+  onEntrenarPrecio: (params: {
+    origen: string
+    destino: string
+    nuevoTotalCop: number
+    modoAprendizaje: ModoAprendizajeTarifa
+    propagarCorredorVecino: boolean
+  }) => void
+  onIrAlLaboratorioEntrenamiento?: () => void
 }
 
 const CASOS_PRUEBA_OFICIALES = [
@@ -146,11 +158,32 @@ export function CotizadorInteligente({
   db,
   telemetriaMapa,
   onChangeTelemetriaMapa,
+  estadoAprendizaje,
+  onEntrenarPrecio,
+  onIrAlLaboratorioEntrenamiento,
 }: CotizadorInteligenteProps) {
   const [focoInput, setFocoInput] = useState<'origen' | 'destino' | null>(null)
   const [copiadoWhatsapp, setCopiadoWhatsapp] = useState(false)
   const [mostrarGuiado, setMostrarGuiado] = useState(false)
   const [modoCasosPrueba, setModoCasosPrueba] = useState<'no_contemplados' | 'oficiales'>('no_contemplados')
+
+  // Estado para el Entrenador de Precio en Vivo dentro de la tarjeta de resultado
+  const [editandoPrecio, setEditandoPrecio] = useState(false)
+  const [precioEntrenarCop, setPrecioEntrenarCop] = useState<number>(
+    resultadoLocal.totalCop
+  )
+  const [modoAprendizajeLocal, setModoAprendizajeLocal] =
+    useState<ModoAprendizajeTarifa>('completo')
+  const [propagarVecinosLocal, setPropagarVecinosLocal] = useState(true)
+  const [feedbackEntrenamiento, setFeedbackEntrenamiento] = useState<{
+    resumen: string[]
+    rutasImpactadas: Array<{
+      origen: string
+      destino: string
+      copAntes: number
+      copDespues: number
+    }>
+  } | null>(null)
 
   // Estado para el Agente IA + Ruteo Carretera Real OSRM
   const [consultaNatural, setConsultaNatural] = useState('')
@@ -181,6 +214,61 @@ export function CotizadorInteligente({
   }, [])
 
   const resultado = resultadoIAOverride ?? resultadoLocal
+
+  useEffect(() => {
+    setPrecioEntrenarCop(resultado.totalCop)
+  }, [resultado.totalCop, origen, destino])
+
+  const vistaPreviaEntrenamiento = React.useMemo(() => {
+    if (!editandoPrecio || precioEntrenarCop === resultado.totalCop) return null
+    return procesarEntrenamientoTarifa({
+      resultadoActual: resultado,
+      nuevoTotalCop: precioEntrenarCop,
+      parametrosActuales: parametros,
+      opcionesActuales: opciones,
+      dbActual: db,
+      estadoAprendizajeActual: estadoAprendizaje,
+      modoAprendizaje: modoAprendizajeLocal,
+      propagarCorredorVecino: propagarVecinosLocal,
+    })
+  }, [
+    editandoPrecio,
+    precioEntrenarCop,
+    resultado,
+    parametros,
+    opciones,
+    db,
+    estadoAprendizaje,
+    modoAprendizajeLocal,
+    propagarVecinosLocal,
+  ])
+
+  const confirmarEntrenamientoPrecio = () => {
+    const preview = procesarEntrenamientoTarifa({
+      resultadoActual: resultado,
+      nuevoTotalCop: precioEntrenarCop,
+      parametrosActuales: parametros,
+      opcionesActuales: opciones,
+      dbActual: db,
+      estadoAprendizajeActual: estadoAprendizaje,
+      modoAprendizaje: modoAprendizajeLocal,
+      propagarCorredorVecino: propagarVecinosLocal,
+    })
+
+    setResultadoIAOverride(null)
+    onEntrenarPrecio({
+      origen,
+      destino,
+      nuevoTotalCop: precioEntrenarCop,
+      modoAprendizaje: modoAprendizajeLocal,
+      propagarCorredorVecino: propagarVecinosLocal,
+    })
+    setEditandoPrecio(false)
+    setFeedbackEntrenamiento({
+      resumen: preview.leccion.ajustesAplicados.resumenAprendizaje,
+      rutasImpactadas: preview.ejemplosImpactados.slice(0, 4),
+    })
+  }
 
   const sugerenciasOrigen = buscarSugerenciasLugares(origen, db, 7)
   const sugerenciasDestino = buscarSugerenciasLugares(destino, db, 7)
@@ -940,6 +1028,230 @@ export function CotizadorInteligente({
               </span>
               <span className="text-xl font-black text-amber-400">COP</span>
             </div>
+
+            {/* BARRA RÁPIDA PARA MODIFICAR EL PRECIO Y ENTRENAR AL SISTEMA */}
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+              {[-2000, -1000, 1000, 2000].map((delta) => (
+                <button
+                  key={delta}
+                  type="button"
+                  onClick={() => {
+                    const base = editandoPrecio
+                      ? precioEntrenarCop
+                      : resultado.totalCop
+                    setPrecioEntrenarCop(Math.max(5000, base + delta))
+                    setEditandoPrecio(true)
+                    setFeedbackEntrenamiento(null)
+                  }}
+                  className="rounded-lg border border-amber-400/30 bg-slate-950/80 hover:bg-amber-400 hover:text-slate-950 px-2.5 py-1 text-[11px] font-extrabold text-amber-300 transition-colors"
+                >
+                  {delta > 0 ? `+${delta.toLocaleString('es-CO')}` : delta.toLocaleString('es-CO')}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setPrecioEntrenarCop(resultado.totalCop)
+                  setEditandoPrecio((prev) => !prev)
+                  setFeedbackEntrenamiento(null)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-500/20 hover:bg-emerald-500 hover:text-slate-950 px-3 py-1 text-[11px] font-black text-emerald-300 transition-all"
+              >
+                <BrainCircuit className="h-3.5 w-3.5" />
+                <span>
+                  {editandoPrecio
+                    ? 'Cerrar Entrenador'
+                    : 'Modificar Precio y Entrenar'}
+                </span>
+              </button>
+            </div>
+
+            {/* PANEL DESPLEGABLE DE ENTRENAMIENTO EN VIVO */}
+            {editandoPrecio && (
+              <div className="mt-3.5 rounded-xl border border-emerald-400/40 bg-slate-950/95 p-3.5 text-left space-y-3 shadow-xl">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <BrainCircuit className="h-4 w-4" />
+                    Entrenar Precio Real para Enseñar al Sistema
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Actual: {resultado.totalCop.toLocaleString('es-CO')} COP
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                      Nuevo Precio en Pesos (COP)
+                    </label>
+                    <input
+                      type="number"
+                      step={1000}
+                      min={5000}
+                      value={precioEntrenarCop}
+                      onChange={(e) =>
+                        setPrecioEntrenarCop(Number(e.target.value) || 0)
+                      }
+                      className="w-full rounded-xl border border-emerald-400/50 bg-slate-900 px-3 py-2 text-base font-black text-amber-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                      Equivalente en Dólares (USD)
+                    </label>
+                    <input
+                      type="number"
+                      step={0.25}
+                      min={1}
+                      value={Number(
+                        (precioEntrenarCop / parametros.tasaCopPorUsd).toFixed(2)
+                      )}
+                      onChange={(e) => {
+                        const usd = Number(e.target.value) || 0
+                        setPrecioEntrenarCop(
+                          Math.round((usd * parametros.tasaCopPorUsd) / 1000) *
+                            1000
+                        )
+                      }}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-base font-black text-emerald-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                  <div className="flex flex-wrap gap-1">
+                    {(
+                      [
+                        { id: 'completo', label: 'Aprender Ruta + Ancla + Resto' },
+                        { id: 'zonal_ancla', label: 'Solo Ruta y Ancla' },
+                        { id: 'solo_formula', label: 'Solo Fórmulas Km' },
+                      ] as const
+                    ).map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setModoAprendizajeLocal(m.id)}
+                        className={`rounded-lg px-2 py-1 text-[10px] font-bold border transition-all ${
+                          modoAprendizajeLocal === m.id
+                            ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300'
+                            : 'border-slate-800 bg-slate-900 text-slate-400'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={propagarVecinosLocal}
+                      onChange={(e) => setPropagarVecinosLocal(e.target.checked)}
+                      className="rounded border-slate-700 text-emerald-500"
+                    />
+                    <span>Ajustar corredor vecino (&lt; 2.4 km)</span>
+                  </label>
+                </div>
+
+                {/* PREVISUALIZACIÓN EN TIEMPO REAL DE CÓMO APRENDE EL RESTO */}
+                {vistaPreviaEntrenamiento && (
+                  <div className="rounded-lg border border-emerald-500/25 bg-emerald-950/25 p-2.5 space-y-1.5 text-[11px]">
+                    <span className="font-bold text-emerald-300 block">
+                      ¿Qué aprenderá el motor al guardar este precio?
+                    </span>
+                    <ul className="space-y-1 text-slate-200">
+                      {vistaPreviaEntrenamiento.leccion.ajustesAplicados.resumenAprendizaje.map(
+                        (item, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <span className="text-emerald-400 font-bold">•</span>
+                            <span>{item}</span>
+                          </li>
+                        )
+                      )}
+                    </ul>
+                    {vistaPreviaEntrenamiento.ejemplosImpactados.length > 0 && (
+                      <div className="pt-1.5 border-t border-emerald-500/20">
+                        <span className="text-[10px] font-bold uppercase text-amber-300 block mb-1">
+                          Impacto automático en otras rutas del sistema:
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                          {vistaPreviaEntrenamiento.ejemplosImpactados
+                            .slice(0, 4)
+                            .map((ej) => (
+                              <div
+                                key={`${ej.origen}-${ej.destino}`}
+                                className="flex items-center justify-between rounded bg-slate-900/90 px-2 py-1 text-[10px]"
+                              >
+                                <span className="text-slate-300 truncate">
+                                  {ej.origen} → <strong>{ej.destino}</strong>
+                                </span>
+                                <span className="font-bold text-emerald-400 shrink-0 ml-1">
+                                  {ej.copAntes.toLocaleString('es-CO')} →{' '}
+                                  {ej.copDespues.toLocaleString('es-CO')}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditandoPrecio(false)}
+                    className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmarEntrenamientoPrecio}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-1.5 text-xs font-black text-slate-950 shadow-lg shadow-emerald-500/20"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    <span>Aplicar Precio y Entrenar Resto de Tarifas</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* CONFIRMACIÓN POST-ENTRENAMIENTO */}
+            {feedbackEntrenamiento && !editandoPrecio && (
+              <div className="mt-3 rounded-xl border border-emerald-400/40 bg-emerald-950/40 p-3 text-left text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-black text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    ¡Sistema entrenado! El motor aprendió esta tarifa y recalibró zonas vecinas:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackEntrenamiento(null)}
+                    className="text-slate-400 hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <ul className="space-y-0.5 text-[11px] text-slate-200">
+                  {feedbackEntrenamiento.resumen.map((r, i) => (
+                    <li key={i}>• {r}</li>
+                  ))}
+                </ul>
+                {onIrAlLaboratorioEntrenamiento && (
+                  <button
+                    type="button"
+                    onClick={onIrAlLaboratorioEntrenamiento}
+                    className="text-[11px] font-bold text-amber-300 hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>
+                      Ver impacto completo en el Laboratorio de Entrenamiento (
+                      {estadoAprendizaje.lecciones.length} lecciones)
+                    </span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {!resultado.esOficial && (
               <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-slate-950/70 border border-amber-400/25 px-3 py-0.5 text-[11px] font-semibold text-amber-200">

@@ -12,6 +12,7 @@ export type ReglaAplicada =
   | 'ESTIMACION_TOPOGRAFICA_KM'
   | 'IA_GEORREFERENCIADA_OSRM'
   | 'RUTA_EXACTA_MAPA_VIAL'
+  | 'RUTA_ENTRENADA_OPERADOR'
 
 export interface AlternativaRutaMapa {
   indice: number
@@ -101,12 +102,84 @@ export interface SectorCoordenada {
 
 export interface AnclaTarifariaReferencia {
   nombreOficial: string
-  tipoTabla: 'Hoja 6 (Base Táriba)' | 'Hoja 6 (Combinación)' | 'Hoja 4 (Viaje Largo)'
+  tipoTabla:
+    | 'Hoja 6 (Base Táriba)'
+    | 'Hoja 6 (Combinación)'
+    | 'Hoja 4 (Viaje Largo)'
+    | 'Ancla Entrenada'
   copOficial: number
   distanciaAlPuntoKm: number
   ajustePorDistanciaCop: number
   tarifaInferidaPuntoCop: number
   coordenadas: { lat: number; lon: number }
+  esEntrenada?: boolean
+}
+
+export type ModoAprendizajeTarifa = 'completo' | 'zonal_ancla' | 'solo_formula'
+
+export interface AnclaAprendidaItem {
+  id: string
+  nombreOficial: string
+  copOficial: number
+  copAnterior?: number
+  tipoTabla:
+    | 'Hoja 6 (Base Táriba)'
+    | 'Hoja 6 (Combinación)'
+    | 'Hoja 4 (Viaje Largo)'
+    | 'Ancla Entrenada'
+  lat: number
+  lon: number
+  topografia: TopografiaTachira
+  municipio?: string
+  clavesAsociadas: string[]
+  fechaActualizacion: string
+}
+
+export interface EjemploRutaImpactada {
+  origen: string
+  destino: string
+  descripcionZona: string
+  copAntes: number
+  copDespues: number
+  diferenciaCop: number
+  motivoCambio: string
+}
+
+export interface LeccionEntrenamiento {
+  id: string
+  fecha: string
+  origen: string
+  destino: string
+  sectorOrigen: string
+  sectorDestino: string
+  reglaOriginal: ReglaAplicada
+  topografia: TopografiaTachira
+  distanciaVialKm: number
+  subtotalSistemaAnteriorCop: number
+  subtotalEntrenadoCop: number
+  totalSistemaAnteriorCop: number
+  totalEntrenadoCop: number
+  deltaCop: number
+  deltaPorcentaje: number
+  coordenadasOrigen: { lat: number; lon: number }
+  coordenadasDestino: { lat: number; lon: number }
+  modoAprendizaje: ModoAprendizajeTarifa
+  propagoCorredorVecino: boolean
+  ajustesAplicados: {
+    parametroModificado?: string
+    valorAnterior?: number
+    valorNuevo?: number
+    anclaActualizada?: string
+    rutasVecinasActualizadas?: number
+    resumenAprendizaje: string[]
+  }
+}
+
+export interface EstadoAprendizajeMotor {
+  tasaAprendizajeAlpha: number // Default: 0.45 (45% peso a la nueva corrección)
+  lecciones: LeccionEntrenamiento[]
+  anclasAprendidas: AnclaAprendidaItem[]
+  factoresZonales: Record<TopografiaTachira, number>
 }
 
 export interface ParametrosMotorTarifas {
@@ -174,6 +247,11 @@ export interface ResultadoCalculoTarifa {
   advertenciaCorreccion?: string
   analisisIA?: AnalisisTarifarioIA
   telemetriaMapa?: TelemetriaRutaMapa
+  aprendizajeAplicado?: {
+    leccionesActivas: number
+    usandoAnclaEntrenada: boolean
+    factorZonalAplicado: number
+  }
 }
 
 export interface AnalisisTarifarioIA {
