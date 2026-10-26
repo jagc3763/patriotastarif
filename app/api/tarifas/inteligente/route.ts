@@ -19,6 +19,7 @@ import {
   ParametrosMotorTarifas,
   TopografiaTachira,
 } from '@/lib/tarifas/types'
+import { leerSnapshotEntrenamiento } from '@/app/api/tarifas/entrenamiento/route'
 
 interface GeocodingResult {
   lat: number
@@ -177,15 +178,19 @@ const EsquemaInferenciaIA = z.object({
 
 export async function POST(request: Request) {
   try {
+    const snapshot = await leerSnapshotEntrenamiento()
     const body = await request.json()
     const origenRaw: string = body.origen ?? 'Táriba'
     const destinoRaw: string = body.destino ?? 'Peribeca'
     const consultaLibre: string | undefined = body.consultaLibre
 
     const parametros: ParametrosMotorTarifas = {
-      ...PARAMETROS_DEFAULT,
+      ...snapshot.parametros,
       ...(body.parametros ?? {}),
     }
+    const estadoAprendizaje =
+      body.estadoAprendizaje ?? snapshot.estadoAprendizaje
+    const dbActiva = body.db ?? snapshot.db
     const opciones: OpcionesViaje = {
       ...OPCIONES_VIAJE_DEFAULT,
       ...(body.opciones ?? {}),
@@ -233,19 +238,35 @@ export async function POST(request: Request) {
       osmOrig.lon,
       geoOrigLocal.tipo,
       parametros,
-      3
+      3,
+      estadoAprendizaje.anclasAprendidas,
+      dbActiva
     )
     const anclasDest = encontrarAnclasTarifariasCercanas(
       osmDest.lat,
       osmDest.lon,
       geoDestLocal.tipo,
       parametros,
-      3
+      3,
+      estadoAprendizaje.anclasAprendidas,
+      dbActiva
     )
 
     const catalogoAnclasResumen = ANCLAS_OFICIALES_GEORREFERENCIADAS.map(
       (a) => `${a.nombreOficial} (${a.municipio}, ${a.topografia}): ${a.copOficial.toLocaleString('es-CO')} COP`
     ).join(' | ')
+
+    const resumenLeccionesEntrenadas =
+      estadoAprendizaje.lecciones.length > 0
+        ? `\n5. CORRECCIONES APRENDIDAS DEL OPERADOR DE DESPACHO (PRIORIDAD MÁXIMA):\n` +
+          estadoAprendizaje.lecciones
+            .slice(0, 12)
+            .map(
+              (l: { origen: string; destino: string; subtotalEntrenadoCop: number; topografia: string }) =>
+                `- ${l.origen} → ${l.destino} (${l.topografia}): entrenada a ${l.subtotalEntrenadoCop.toLocaleString('es-CO')} COP`
+            )
+            .join('\n')
+        : ''
 
     let resultadoIA: z.infer<typeof EsquemaInferenciaIA> | null = null
 
@@ -271,7 +292,7 @@ REGLAS DE ORO DE LÍNEA LOS PATRIOTAS (TÁRIBA):
    - El taxi debe salir de Base Táriba a recoger al cliente en A (Tramo 1 Recogida, factor ${parametros.factorRecogidaRadial * 100}%) y luego trasladarlo a B (Tramo 2 Traslado).
    - Si A y B son sectores muy cercanos entre sí (< 4 km dentro del mismo casco urbano), el Tramo 2 se calcula por distancia vial corta para mantener un precio competitivo y realista.
 4. Catálogo de Anclas Oficiales desde Base Táriba:
-${catalogoAnclasResumen}`,
+${catalogoAnclasResumen}${resumenLeccionesEntrenadas}`,
         prompt: consultaLibre
           ? `Analiza la siguiente solicitud en lenguaje natural para un taxi en el Táchira:
 "${consultaLibre}"
@@ -305,7 +326,10 @@ ${catalogoAnclasResumen}`,
       origenFinal,
       destinoFinal,
       parametros,
-      opcionesFinales
+      opcionesFinales,
+      dbActiva,
+      null,
+      estadoAprendizaje
     )
 
     const distanciaVialFinal =

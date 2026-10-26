@@ -8,6 +8,7 @@ import {
 import {
   AnclaTarifariaReferencia,
   CombinacionItem,
+  EstadoAprendizajeMotor,
   NivelConfianzaTarifa,
   OpcionesViaje,
   ParametrosMotorTarifas,
@@ -832,7 +833,8 @@ export function calcularTarifaPatriotas(
   parametros: ParametrosMotorTarifas = PARAMETROS_DEFAULT,
   opciones: OpcionesViaje = OPCIONES_VIAJE_DEFAULT,
   customDb?: TarifasTachiraDB,
-  telemetriaMapa?: TelemetriaRutaMapa | null
+  telemetriaMapa?: TelemetriaRutaMapa | null,
+  estadoAprendizaje?: EstadoAprendizajeMotor
 ): ResultadoCalculoTarifa {
   const db = customDb ?? obtenerDbSaneada()
 
@@ -952,14 +954,18 @@ export function calcularTarifaPatriotas(
     geoDestino.lon,
     geoDestino.tipo,
     parametros,
-    3
+    3,
+    estadoAprendizaje?.anclasAprendidas,
+    db
   )
   const anclasCercanasOrigen = encontrarAnclasTarifariasCercanas(
     geoOrigen.lat,
     geoOrigen.lon,
     geoOrigen.tipo,
     parametros,
-    3
+    3,
+    estadoAprendizaje?.anclasAprendidas,
+    db
   )
   const pasosRazonamiento: string[] = []
 
@@ -1190,9 +1196,27 @@ export function calcularTarifaPatriotas(
         )
       }
 
+      // Calibración por factor zonal aprendido (si existen lecciones previas en esta topografía)
+      const factorZonalAprendido =
+        estadoAprendizaje?.factoresZonales?.[topografiaDominante] ?? 1.0
+      const baseSinCalibrarZonal = tramo1RecogidaCop + tramo2TrasladoCop
+      const baseCalibradaZonal =
+        Math.abs(factorZonalAprendido - 1.0) >= 0.01
+          ? redondearTarifaTachira(
+              Math.round(baseSinCalibrarZonal * factorZonalAprendido)
+            )
+          : baseSinCalibrarZonal
+
+      if (Math.abs(factorZonalAprendido - 1.0) >= 0.01) {
+        const pctZonal = Math.round((factorZonalAprendido - 1) * 100)
+        pasosRazonamiento.push(
+          `Aprendizaje Adaptativo Activo (${estadoAprendizaje?.lecciones.length ?? 0} lecciones): factor zonal ${topografiaDominante.toUpperCase()} (${pctZonal >= 0 ? '+' : ''}${pctZonal}%) ajusta de ${baseSinCalibrarZonal.toLocaleString('es-CO')} a ${baseCalibradaZonal.toLocaleString('es-CO')} COP.`
+        )
+      }
+
       subtotalBaseCop = Math.max(
         parametros.tarifaMinimaBaseCop,
-        tramo1RecogidaCop + tramo2TrasladoCop
+        baseCalibradaZonal
       )
       esOficial = false
 
@@ -1317,6 +1341,16 @@ export function calcularTarifaPatriotas(
     pasosRazonamiento,
     advertenciaCorreccion,
     telemetriaMapa: telemetriaMapa ?? undefined,
+    aprendizajeAplicado: estadoAprendizaje
+      ? {
+          leccionesActivas: estadoAprendizaje.lecciones.length,
+          usandoAnclaEntrenada: Boolean(
+            anclaDestinoUsada?.esEntrenada || anclaOrigenUsada?.esEntrenada
+          ),
+          factorZonalAplicado:
+            estadoAprendizaje.factoresZonales[topografiaDominante] ?? 1.0,
+        }
+      : undefined,
   }
 }
 

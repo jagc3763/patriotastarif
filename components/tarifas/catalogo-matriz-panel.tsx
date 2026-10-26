@@ -26,6 +26,7 @@ interface CatalogoMatrizPanelProps {
     cop: number
     usd?: number
   }) => void
+  onEntrenarRutaDesdeCatalogo?: (origen: string, destino: string, nuevoCop: number) => void
 }
 
 export function CatalogoMatrizPanel({
@@ -33,10 +34,13 @@ export function CatalogoMatrizPanel({
   parametros,
   onProbarRuta,
   onAgregarRutaCustom,
+  onEntrenarRutaDesdeCatalogo,
 }: CatalogoMatrizPanelProps) {
   const [subTab, setSubTab] = useState<'matriz' | 'largos' | 'agregar'>('matriz')
   const [busqueda, setBusqueda] = useState('')
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'base' | 'combinacion' | 'largo'>('todos')
+  const [idFilaEditando, setIdFilaEditando] = useState<string | null>(null)
+  const [copEditando, setCopEditando] = useState<number>(20000)
 
   const [nuevaCat, setNuevaCat] = useState<'base' | 'combinacion' | 'largo'>('base')
   const [nuevoOrigen, setNuevoOrigen] = useState('Táriba')
@@ -287,7 +291,20 @@ export function CatalogoMatrizPanel({
                       </span>
                     </td>
                     <td className="py-2.5 px-4 text-right font-bold text-white">
-                      {item.cop.toLocaleString('es-CO')} COP
+                      {idFilaEditando === item.id ? (
+                        <input
+                          type="number"
+                          step={1000}
+                          min={5000}
+                          value={copEditando}
+                          onChange={(e) =>
+                            setCopEditando(Number(e.target.value) || 0)
+                          }
+                          className="w-28 rounded-lg border border-amber-400 bg-slate-950 px-2 py-1 text-right text-xs font-black text-amber-400 focus:outline-none"
+                        />
+                      ) : (
+                        `${item.cop.toLocaleString('es-CO')} COP`
+                      )}
                     </td>
                     <td className="py-2.5 px-4 text-right font-bold text-amber-300">
                       ${item.usd.toFixed(2)}
@@ -296,14 +313,54 @@ export function CatalogoMatrizPanel({
                       Bs. {item.bcv.toFixed(2)}
                     </td>
                     <td className="py-2.5 px-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() => onProbarRuta(item.origen, item.destino)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-slate-800 hover:bg-amber-400 hover:text-slate-950 px-2.5 py-1 text-[11px] font-bold text-amber-400 transition-colors"
-                      >
-                        <span>Cotizar</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </button>
+                      {idFilaEditando === item.id ? (
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onEntrenarRutaDesdeCatalogo?.(
+                                item.origen,
+                                item.destino,
+                                copEditando
+                              )
+                              setIdFilaEditando(null)
+                            }}
+                            className="rounded-lg bg-emerald-500 px-2.5 py-1 text-[11px] font-black text-slate-950"
+                          >
+                            Entrenar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIdFilaEditando(null)}
+                            className="rounded-lg bg-slate-800 px-2 py-1 text-[11px] text-slate-300"
+                          >
+                            X
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5">
+                          {onEntrenarRutaDesdeCatalogo && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIdFilaEditando(item.id)
+                                setCopEditando(item.cop)
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/30 px-2 py-1 text-[11px] font-bold text-emerald-300 transition-colors"
+                            >
+                              <span>Modificar</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onProbarRuta(item.origen, item.destino)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-slate-800 hover:bg-amber-400 hover:text-slate-950 px-2.5 py-1 text-[11px] font-bold text-amber-400 transition-colors"
+                          >
+                            <span>Cotizar</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
