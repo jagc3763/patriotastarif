@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { procesarMensajeEntranteWhatsApp } from '@/lib/whatsapp/bot-engine'
+import { CATALOGO_MODELOS_ROUTER } from '@/lib/whatsapp/model-router'
 import {
+  actualizarConfiguracionRouter,
   cambiarEstadoPedidoDespacho,
   leerAlmacenWhatsApp,
   reiniciarSesionCliente,
@@ -76,7 +78,7 @@ async function enviarMensajeEvolutionApi(
 /**
  * GET /api/whatsapp/webhook
  * 1) Verificación oficial del Webhook de Meta Cloud API (hub.verify_token)
- * 2) Consulta de estado, sesiones y bandeja de despachos para el panel web
+ * 2) Consulta de estado, sesiones, configuración del Router IA y bandeja de despachos para el panel web
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -117,8 +119,13 @@ export async function GET(request: NextRequest) {
       evolutionQrApi: Boolean(
         process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY
       ),
+      customRouterApiKey: Boolean(
+        process.env.AI_ROUTER_API_KEY || process.env.OPENROUTER_API_KEY
+      ),
       verifyTokenConfigurado: verifyTokenEsperado,
     },
+    configuracionRouter: almacen.configuracionRouter,
+    catalogoModelosRouter: CATALOGO_MODELOS_ROUTER,
     sesion: sesionActiva,
     pedidosDespacho: almacen.pedidosDespacho,
     totalSesionesActivas: Object.keys(almacen.sesiones).length,
@@ -130,11 +137,23 @@ export async function GET(request: NextRequest) {
  * Soporta simultáneamente:
  * A) Payload Oficial de Meta WhatsApp Cloud API
  * B) Payload de Evolution API / Baileys (Conexión local por QR)
- * C) Simulador Directo en Pantalla / Acciones de gestión de sesión
+ * C) Simulador Directo en Pantalla / Configuración del Router IA / Gestión de sesión
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+
+    // Acción administrativa: actualizar configuración del Router Multi-Modelo y Guardrails
+    if (body.accion === 'configurar_router_ia' && body.configuracionRouter) {
+      const nuevaConfig = await actualizarConfiguracionRouter(
+        body.configuracionRouter
+      )
+      return NextResponse.json({
+        ok: true,
+        configuracionRouter: nuevaConfig,
+        catalogoModelosRouter: CATALOGO_MODELOS_ROUTER,
+      })
+    }
 
     // Acción administrativa: reiniciar conversación de un cliente
     if (body.accion === 'reiniciar_sesion') {
@@ -146,6 +165,7 @@ export async function POST(request: NextRequest) {
         ok: true,
         sesion: sesionLimpia,
         pedidosDespacho: almacen.pedidosDespacho,
+        configuracionRouter: almacen.configuracionRouter,
       })
     }
 
@@ -170,7 +190,10 @@ export async function POST(request: NextRequest) {
       const contact = value?.contacts?.[0]
 
       if (!message) {
-        return NextResponse.json({ ok: true, ignorado: 'Evento de estado sin mensaje' })
+        return NextResponse.json({
+          ok: true,
+          ignorado: 'Evento de estado sin mensaje',
+        })
       }
 
       const telefono = message.from || '584140000000'
@@ -213,6 +236,7 @@ export async function POST(request: NextRequest) {
         enviadoMeta,
         respuesta: resultado.textoRespuesta,
         cotizacion: resultado.cotizacionGenerada,
+        extraccionNlu: resultado.extraccionNlu,
       })
     }
 
@@ -220,7 +244,10 @@ export async function POST(request: NextRequest) {
     if (body.event === 'messages.upsert' && body.data) {
       const msgData = body.data
       if (msgData.key?.fromMe) {
-        return NextResponse.json({ ok: true, ignorado: 'Mensaje propio del bot' })
+        return NextResponse.json({
+          ok: true,
+          ignorado: 'Mensaje propio del bot',
+        })
       }
 
       const remoteJid: string = msgData.key?.remoteJid || ''
@@ -259,6 +286,7 @@ export async function POST(request: NextRequest) {
         enviadoEvolution,
         respuesta: resultado.textoRespuesta,
         cotizacion: resultado.cotizacionGenerada,
+        extraccionNlu: resultado.extraccionNlu,
       })
     }
 
@@ -269,6 +297,7 @@ export async function POST(request: NextRequest) {
       texto: body.texto || '',
       ubicacionGps: body.ubicacionGps,
       forzarNocturno: body.forzarNocturno,
+      configRouterOverride: body.configRouterOverride,
     })
 
     const almacen = await leerAlmacenWhatsApp()

@@ -8,11 +8,17 @@ import {
   ResultadoCalculoTarifa,
 } from '@/lib/tarifas/types'
 import {
+  ConfiguracionRouterIA,
+  EstrategiaRouterIA,
   ExtraccionNluWhatsApp,
   PedidoDespachoWhatsApp,
   SesionClienteWhatsApp,
   UbicacionGpsWhatsApp,
 } from '@/lib/whatsapp/types'
+import {
+  CATALOGO_MODELOS_ROUTER,
+  CONFIGURACION_ROUTER_DEFECTO,
+} from '@/lib/whatsapp/model-router'
 import {
   MessageSquare,
   Send,
@@ -29,6 +35,10 @@ import {
   Cloud,
   CarTaxiFront,
   PhoneCall,
+  ShieldCheck,
+  ShieldAlert,
+  Cpu,
+  Network,
 } from 'lucide-react'
 
 interface BotWhatsappPanelProps {
@@ -72,27 +82,69 @@ const PINES_GPS_PRUEBA: Array<{
 
 const MENSAJES_RAPIDOS_PRUEBA = [
   {
-    titulo: '1. Consulta completa directa',
+    titulo: '1. Consulta directa',
     texto:
       'Buenas tardes, ¿cuánto me sale un taxi desde Las Vegas de Táriba hasta el Sambil?',
+    tipo: 'normal' as const,
   },
   {
-    titulo: '2. Consulta sin decir origen (Memoria)',
+    titulo: '2. Sin origen (Memoria)',
     texto: 'Hola, ¿cuánto cobran para ir a Cordero?',
+    tipo: 'normal' as const,
   },
   {
-    titulo: '3. Completar origen faltante',
+    titulo: '3. Completar origen',
     texto: 'Estoy en Sabaneta',
+    tipo: 'normal' as const,
   },
   {
-    titulo: '4. Nocturno + Parada extra',
+    titulo: '4. Nocturno + Parada',
     texto: 'Desde Palmira hasta el Terminal de noche haciendo 1 parada',
+    tipo: 'normal' as const,
   },
   {
-    titulo: '5. Confirmar unidad (PEDIR)',
+    titulo: '5. Confirmar (PEDIR)',
     texto: 'PEDIR',
+    tipo: 'normal' as const,
+  },
+  {
+    titulo: '6. Duda de Traslado (Pagos)',
+    texto: '¿Aceptan Pago Móvil o pesos y a qué tasa calculan hoy?',
+    tipo: 'duda' as const,
+  },
+  {
+    titulo: '7. Probar Guardrail (Fuera de Tema)',
+    texto:
+      '¿Me das la receta de la pizca andina y me dices quién ganó el partido de fútbol?',
+    tipo: 'guardrail' as const,
   },
 ]
+
+const ETIQUETAS_ESTRATEGIA_ROUTER: Record<
+  EstrategiaRouterIA,
+  { titulo: string; resumen: string }
+> = {
+  auto_complejidad: {
+    titulo: 'Auto por Complejidad (Smart Router)',
+    resumen:
+      'Enruta mensajes cortos a Gemini 3.5 Flash, cotizaciones estándar a GPT-5.4 Mini y jerga compleja a Claude Haiku 4.5.',
+  },
+  balanceo_proveedores: {
+    titulo: 'Balanceo Round-Robin Multi-Proveedor',
+    resumen:
+      'Distribuye las consultas rotando entre OpenAI, Google Gemini y Anthropic con failover automático.',
+  },
+  modelo_fijo: {
+    titulo: 'Modelo Primario Fijo + Fallback',
+    resumen:
+      'Usa siempre el modelo que elijas abajo como primario y conmuta a los demás solo si ocurre un error.',
+  },
+  custom_api_router: {
+    titulo: 'Router API Externo (OpenRouter / Compatible)',
+    resumen:
+      'Conecta un endpoint /chat/completions externo (ej. OpenRouter o Groq) con respaldo al AI Gateway.',
+  },
+}
 
 export function BotWhatsappPanel({
   parametros,
@@ -100,14 +152,19 @@ export function BotWhatsappPanel({
   onEntrenarPrecioDesdeBot,
   onProbarEnCotizador,
 }: BotWhatsappPanelProps) {
-  const [subVista, setSubVista] = useState<'simulador' | 'despachos' | 'conexion'>(
-    'simulador'
-  )
+  const [subVista, setSubVista] = useState<
+    'simulador' | 'despachos' | 'conexion'
+  >('simulador')
   const [telefonoSimulado, setTelefonoSimulado] = useState('584147654321')
   const [nombreSimulado, setNombreSimulado] = useState('Carlos Chacón')
   const [textoInput, setTextoInput] = useState('')
   const [forzarNocturno, setForzarNocturno] = useState(false)
   const [enviando, setEnviando] = useState(false)
+
+  const [configRouter, setConfigRouter] = useState<ConfiguracionRouterIA>(
+    CONFIGURACION_ROUTER_DEFECTO
+  )
+  const [guardandoRouter, setGuardandoRouter] = useState(false)
 
   const [sesion, setSesion] = useState<SesionClienteWhatsApp | null>(null)
   const [ultimaExtraccion, setUltimaExtraccion] =
@@ -119,17 +176,23 @@ export function BotWhatsappPanel({
   >([])
 
   // Estado para entrenar directamente la última tarifa cotizada por el bot
-  const [precioEntrenarBotCop, setPrecioEntrenarBotCop] = useState<number>(20000)
+  const [precioEntrenarBotCop, setPrecioEntrenarBotCop] =
+    useState<number>(20000)
   const [entrenadoExitoso, setEntrenadoExitoso] = useState(false)
   const [copiadoId, setCopiadoId] = useState<string | null>(null)
 
   const chatScrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    fetch(`/api/whatsapp/webhook?telefono=${encodeURIComponent(telefonoSimulado)}`)
+    fetch(
+      `/api/whatsapp/webhook?telefono=${encodeURIComponent(telefonoSimulado)}`
+    )
       .then((res) => res.json())
       .then((data) => {
         if (data?.ok) {
+          if (data.configuracionRouter) {
+            setConfigRouter(data.configuracionRouter)
+          }
           if (data.sesion) {
             setSesion(data.sesion)
             if (data.sesion.ultimaCotizacion) {
@@ -150,6 +213,33 @@ export function BotWhatsappPanel({
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
     }
   }, [sesion?.historial.length, enviando])
+
+  const guardarConfiguracionRouterServidor = async (
+    parcial: Partial<ConfiguracionRouterIA>
+  ) => {
+    const nueva: ConfiguracionRouterIA = {
+      ...configRouter,
+      ...parcial,
+    }
+    setConfigRouter(nueva)
+    setGuardandoRouter(true)
+    try {
+      const res = await fetch('/api/whatsapp/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'configurar_router_ia',
+          configuracionRouter: nueva,
+        }),
+      })
+      const data = await res.json()
+      if (data?.ok && data.configuracionRouter) {
+        setConfigRouter(data.configuracionRouter)
+      }
+    } finally {
+      setGuardandoRouter(false)
+    }
+  }
 
   const enviarMensajeAlWebhook = async (opciones: {
     texto?: string
@@ -172,6 +262,7 @@ export function BotWhatsappPanel({
           texto: opciones.texto,
           ubicacionGps: opciones.ubicacionGps,
           forzarNocturno,
+          configRouterOverride: configRouter,
         }),
       })
       const data = await res.json()
@@ -257,6 +348,10 @@ export function BotWhatsappPanel({
     }, 250)
   }
 
+  const bloqueadoPorGuardrail =
+    ultimaExtraccion?.intencion === 'FUERA_DE_DOMINIO' ||
+    ultimaExtraccion?.esTemaTraslado === false
+
   return (
     <div className="space-y-6">
       {/* BARRA SUPERIOR DEL MÓDULO DE WHATSAPP */}
@@ -266,17 +361,22 @@ export function BotWhatsappPanel({
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-0.5 text-xs font-black text-emerald-300">
                 <MessageSquare className="h-3.5 w-3.5" />
-                Bot de WhatsApp con IA + Tarifario Entrenado
+                Bot de WhatsApp + Router Multi-Modelo IA
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 border border-sky-400/30 px-2.5 py-0.5 text-[11px] font-bold text-sky-300">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Guardrail Activo: Solo Traslados
               </span>
               <span className="rounded-full bg-amber-400/15 border border-amber-400/30 px-2.5 py-0.5 text-[11px] font-bold text-amber-300">
-                {estadoAprendizaje.lecciones.length} lecciones de precios conectadas al Bot
+                {estadoAprendizaje.lecciones.length} lecciones de precios
+                conectadas al Bot
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-black text-white">
-              Automatización de Cotizaciones y Despacho por WhatsApp (Local + Nube)
+              Automatización de Cotizaciones y Despacho por WhatsApp con Router IA
             </h2>
             <p className="text-xs text-slate-300 max-w-3xl">
-              El bot interpreta mensajes de texto o pines GPS de los clientes usando IA en la nube, mantiene memoria de la conversación si falta el origen o el destino, y responde automáticamente con el precio exacto de tu tarifario entrenado.
+              Enruta cada mensaje entre múltiples modelos de IA (OpenAI GPT-5.4 Mini, Google Gemini 3.5 Flash, Anthropic Claude Haiku 4.5 o Router API externo) con bloqueo estricto de dominio para responder únicamente sobre traslados y tarifas oficiales de Línea Los Patriotas.
             </p>
           </div>
 
@@ -317,7 +417,7 @@ export function BotWhatsappPanel({
               }`}
             >
               <QrCode className="h-3.5 w-3.5" />
-              <span>Conectar WhatsApp Real (Local / Cloud)</span>
+              <span>Conectar WhatsApp y Router API</span>
             </button>
           </div>
         </div>
@@ -342,7 +442,7 @@ export function BotWhatsappPanel({
                     <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                   </div>
                   <p className="text-[11px] text-emerald-400">
-                    en línea • Responde con precios entrenados en tiempo real
+                    Router IA: {ETIQUETAS_ESTRATEGIA_ROUTER[configRouter.estrategia].titulo} • Solo Traslados
                   </p>
                 </div>
               </div>
@@ -374,7 +474,7 @@ export function BotWhatsappPanel({
             <div className="bg-[#111b21] px-3.5 py-2.5 border-b border-slate-800/80 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Mensajes de prueba de clientes (1 clic):
+                  Mensajes de prueba rápida (Rutas, Dudas Operativas y Guardrail):
                 </span>
                 <span className="text-[10px] text-emerald-400 font-semibold">
                   Estado actual: {sesion?.estado ?? 'INICIAL'}
@@ -387,7 +487,13 @@ export function BotWhatsappPanel({
                     type="button"
                     disabled={enviando}
                     onClick={() => enviarMensajeAlWebhook({ texto: item.texto })}
-                    className="rounded-lg border border-emerald-500/30 bg-[#202c33] hover:bg-emerald-500 hover:text-slate-950 px-2.5 py-1 text-[11px] font-bold text-emerald-300 transition-colors"
+                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold transition-colors ${
+                      item.tipo === 'guardrail'
+                        ? 'border-rose-500/40 bg-rose-500/10 hover:bg-rose-500 hover:text-slate-950 text-rose-300'
+                        : item.tipo === 'duda'
+                        ? 'border-sky-500/40 bg-sky-500/10 hover:bg-sky-400 hover:text-slate-950 text-sky-300'
+                        : 'border-emerald-500/30 bg-[#202c33] hover:bg-emerald-500 hover:text-slate-950 text-emerald-300'
+                    }`}
                   >
                     {item.titulo}
                   </button>
@@ -429,11 +535,13 @@ export function BotWhatsappPanel({
                 <div className="rounded-xl border border-slate-800 bg-[#182229] p-4 text-center max-w-md mx-auto my-8 space-y-2">
                   <Sparkles className="h-6 w-6 text-emerald-400 mx-auto" />
                   <p className="text-xs font-bold text-slate-200">
-                    Simulador de WhatsApp conectado a tu motor de tarifas
+                    Simulador de WhatsApp conectado a tu Router Multi-Modelo y Motor de Tarifas
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    Escribe cualquier consulta como si fueras un pasajero en Táchira (ej.{' '}
-                    <em>&quot;Hola, ¿cuánto sale desde Las Vegas de Táriba hasta el Sambil?&quot;</em>) o pulsa uno de los botones de arriba.
+                    Prueba una consulta de traslado (ej.{' '}
+                    <em>&quot;Desde Las Vegas de Táriba hasta el Sambil&quot;</em>
+                    ) o intenta hacer una pregunta fuera de tema con el botón{' '}
+                    <strong>7. Probar Guardrail</strong> para verificar el bloqueo de dominio.
                   </p>
                 </div>
               )}
@@ -464,7 +572,12 @@ export function BotWhatsappPanel({
                       <div className="whitespace-pre-wrap leading-relaxed font-sans">
                         {msg.texto}
                       </div>
-                      <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-300/80">
+                      <div className="mt-1 flex items-center justify-end gap-1.5 text-[10px] text-slate-300/80">
+                        {!esCliente && msg.extraccionNlu?.modeloUsado && (
+                          <span className="rounded bg-slate-900/90 px-1.5 py-0.5 font-mono text-[9px] text-sky-300">
+                            {msg.extraccionNlu.modeloUsado}
+                          </span>
+                        )}
                         <span>{horaFormateada}</span>
                         {esCliente && (
                           <CheckCheck className="h-3.5 w-3.5 text-sky-400" />
@@ -478,7 +591,7 @@ export function BotWhatsappPanel({
               {enviando && (
                 <div className="flex justify-start">
                   <div className="rounded-2xl rounded-tl-none bg-[#202c33] border border-slate-700 px-4 py-2.5 text-xs text-emerald-300 font-semibold animate-pulse">
-                    Bot Los Patriotas está calculando la tarifa...
+                    Router IA analizando intención de traslado y calculando tarifa...
                   </div>
                 </div>
               )}
@@ -512,14 +625,151 @@ export function BotWhatsappPanel({
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: INSPECTOR DEL CEREBRO IA + ENTRENADOR EN VIVO */}
+          {/* COLUMNA DERECHA: ROUTER MULTI-MODELO + GUARDRAIL + ENTRENADOR EN VIVO */}
           <div className="lg:col-span-5 space-y-4">
-            {/* TARJETA 1: ESTADO DE MEMORIA CONVERSACIONAL DEL CLIENTE */}
+            {/* TARJETA 0: CONFIGURACIÓN DEL ROUTER MULTI-MODELO Y GUARDRAIL DE TRASLADOS */}
+            <div className="rounded-2xl border border-sky-500/30 bg-slate-900/95 p-4 space-y-3 shadow-lg">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs font-black uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                  <Network className="h-4 w-4" />
+                  Router API Multi-Modelo IA y Filtro de Dominio
+                </h3>
+                <span className="rounded-full bg-emerald-500/15 border border-emerald-400/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                  {guardandoRouter ? 'Guardando...' : 'Activo en Webhook'}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-[11px] font-bold text-slate-300">
+                  Estrategia de Enrutamiento de Modelos:
+                </label>
+                <select
+                  value={configRouter.estrategia}
+                  onChange={(e) =>
+                    guardarConfiguracionRouterServidor({
+                      estrategia: e.target.value as EstrategiaRouterIA,
+                    })
+                  }
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-sky-400"
+                >
+                  {(
+                    Object.keys(
+                      ETIQUETAS_ESTRATEGIA_ROUTER
+                    ) as EstrategiaRouterIA[]
+                  ).map((key) => (
+                    <option key={key} value={key}>
+                      {ETIQUETAS_ESTRATEGIA_ROUTER[key].titulo}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  {ETIQUETAS_ESTRATEGIA_ROUTER[configRouter.estrategia].resumen}
+                </p>
+              </div>
+
+              {configRouter.estrategia === 'modelo_fijo' && (
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-[11px] font-bold text-slate-300">
+                    Modelo Primario Seleccionado (con fallback automático):
+                  </label>
+                  <select
+                    value={configRouter.modeloPrimario}
+                    onChange={(e) =>
+                      guardarConfiguracionRouterServidor({
+                        modeloPrimario: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-sky-500/40 bg-slate-950 px-3 py-2 text-xs font-bold text-sky-300 focus:outline-none"
+                  >
+                    {CATALOGO_MODELOS_ROUTER.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.proveedor} — {m.nombre} ({m.velocidad})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {configRouter.estrategia === 'custom_api_router' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 mb-1">
+                      Endpoint Base URL (OpenRouter / Groq):
+                    </label>
+                    <input
+                      type="text"
+                      value={configRouter.customRouterUrl || ''}
+                      onChange={(e) =>
+                        setConfigRouter({
+                          ...configRouter,
+                          customRouterUrl: e.target.value,
+                        })
+                      }
+                      onBlur={() =>
+                        guardarConfiguracionRouterServidor({
+                          customRouterUrl: configRouter.customRouterUrl,
+                        })
+                      }
+                      placeholder="https://openrouter.ai/api/v1"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[11px] font-mono text-sky-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 mb-1">
+                      ID del Modelo en el Router:
+                    </label>
+                    <input
+                      type="text"
+                      value={configRouter.customRouterModel || ''}
+                      onChange={(e) =>
+                        setConfigRouter({
+                          ...configRouter,
+                          customRouterModel: e.target.value,
+                        })
+                      }
+                      onBlur={() =>
+                        guardarConfiguracionRouterServidor({
+                          customRouterModel: configRouter.customRouterModel,
+                        })
+                      }
+                      placeholder="openai/gpt-4o-mini"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[11px] font-mono text-amber-300"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/90 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <div>
+                    <span className="text-[11px] font-black text-white block">
+                      Guardrail Estricto: Solo Responder Traslados
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">
+                      Bloquea recetas, deportes, política o temas ajenos a taxis
+                    </span>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={configRouter.guardrailSoloTraslados}
+                  onChange={(e) =>
+                    guardarConfiguracionRouterServidor({
+                      guardrailSoloTraslados: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 rounded border-slate-600 text-emerald-500 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* TARJETA 1: ESTADO DE MEMORIA CONVERSACIONAL Y TRAZA DEL ROUTER */}
             <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                   <BrainCircuit className="h-4 w-4" />
-                  Memoria Conversacional del Cliente
+                  Inspector NLU y Memoria del Cliente
                 </h3>
                 <span className="rounded-lg bg-slate-950 border border-slate-800 px-2.5 py-0.5 text-[11px] font-mono text-emerald-400">
                   +{telefonoSimulado}
@@ -537,11 +787,13 @@ export function BotWhatsappPanel({
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-2.5">
                   <span className="text-[10px] text-slate-400 block">
-                    Motor NLU Utilizado
+                    Modelo que Respondió
                   </span>
-                  <span className="font-bold text-sky-300 text-xs">
-                    {ultimaExtraccion?.motorNluUsado === 'cloud_ai'
-                      ? 'IA en la Nube (GPT-5.4-mini)'
+                  <span className="font-bold text-sky-300 text-xs truncate block">
+                    {ultimaExtraccion?.modeloUsado
+                      ? ultimaExtraccion.modeloUsado
+                      : ultimaExtraccion?.motorNluUsado === 'cloud_ai'
+                      ? 'openai/gpt-5.4-mini'
                       : 'Motor Local Instantáneo'}
                   </span>
                 </div>
@@ -564,18 +816,76 @@ export function BotWhatsappPanel({
               </div>
 
               {ultimaExtraccion && (
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] space-y-1">
-                  <div className="flex items-center justify-between">
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
                     <span className="font-bold text-slate-300">
-                      Intención detectada:
+                      Intención y Guardrail:
                     </span>
-                    <span className="rounded bg-amber-400/15 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-300">
-                      {ultimaExtraccion.intencion}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] font-bold ${
+                          bloqueadoPorGuardrail
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        }`}
+                      >
+                        {bloqueadoPorGuardrail ? (
+                          <>
+                            <ShieldAlert className="h-3 w-3" />
+                            <span>BLOQUEADO: NO ES TRASLADO</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="h-3 w-3" />
+                            <span>DOMINIO TRASLADO OK</span>
+                          </>
+                        )}
+                      </span>
+                      <span className="rounded bg-amber-400/15 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-300">
+                        {ultimaExtraccion.intencion}
+                      </span>
+                    </div>
                   </div>
+
                   <p className="text-slate-400">
                     {ultimaExtraccion.razonamientoBreve}
                   </p>
+
+                  {ultimaExtraccion.intentosRouter &&
+                    ultimaExtraccion.intentosRouter.length > 0 && (
+                      <div className="pt-1.5 border-t border-slate-800/80 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                          <Cpu className="h-3 w-3 text-sky-400" />
+                          Traza de Conmutación del Router IA:
+                        </span>
+                        <div className="space-y-1">
+                          {ultimaExtraccion.intentosRouter.map((int, idx) => (
+                            <div
+                              key={`${int.modelo}-${idx}`}
+                              className="flex items-center justify-between rounded bg-slate-900 px-2 py-1 text-[10px]"
+                            >
+                              <span className="font-mono text-slate-200">
+                                {idx + 1}. {int.modelo}{' '}
+                                <span className="text-slate-400">
+                                  ({int.proveedor})
+                                </span>
+                              </span>
+                              <span
+                                className={`font-bold ${
+                                  int.estado === 'exito'
+                                    ? 'text-emerald-400'
+                                    : 'text-rose-400'
+                                }`}
+                              >
+                                {int.estado === 'exito'
+                                  ? `OK (${int.latenciaMs} ms)`
+                                  : `Fallback (${int.latenciaMs} ms)`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                 </div>
               )}
             </div>
@@ -672,7 +982,8 @@ export function BotWhatsappPanel({
                 Bandeja de Despacho: Carreras Confirmadas por Clientes (PEDIR)
               </h3>
               <p className="text-xs text-slate-400">
-                Cada vez que un cliente responde <strong>PEDIR</strong> o <strong>SÍ</strong> a una cotización en WhatsApp, aparece aquí listo para enviar al grupo de conductores.
+                Cada vez que un cliente responde <strong>PEDIR</strong> o{' '}
+                <strong>SÍ</strong> a una cotización en WhatsApp, aparece aquí listo para enviar al grupo de conductores.
               </p>
             </div>
           </div>
@@ -684,7 +995,7 @@ export function BotWhatsappPanel({
                 Aún no hay carreras confirmadas en esta sesión
               </p>
               <p className="text-xs text-slate-400">
-                Ve al <strong>Simulador en Vivo</strong>, realiza una cotización y pulsa el botón <strong>5. Confirmar unidad (PEDIR)</strong> para probar el flujo completo.
+                Ve al <strong>Simulador en Vivo</strong>, realiza una cotización y pulsa el botón <strong>5. Confirmar (PEDIR)</strong> para probar el flujo completo.
               </p>
             </div>
           ) : (
@@ -718,7 +1029,8 @@ export function BotWhatsappPanel({
                         <strong>Recogida:</strong> {p.origen}
                       </div>
                       <div>
-                        <strong>Destino:</strong> {p.destino} ({p.distanciaKm} km)
+                        <strong>Destino:</strong> {p.destino} ({p.distanciaKm}{' '}
+                        km)
                       </div>
                       <div className="text-sm font-black text-amber-400 pt-1">
                         {p.totalCop.toLocaleString('es-CO')} COP • $
@@ -788,56 +1100,48 @@ export function BotWhatsappPanel({
         </div>
       )}
 
-      {/* SUBVISTA 3: GUÍA DE CONEXIÓN LOCAL + NUBE (QR Y META CLOUD API) */}
+      {/* SUBVISTA 3: GUÍA DE CONEXIÓN LOCAL + NUBE + ROUTER API */}
       {subVista === 'conexion' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 space-y-4">
             <div className="flex items-center gap-2 text-emerald-400 font-black text-sm">
               <Server className="h-4 w-4" />
               <h3>
-                Opción 1: Correr en tu PC Local (Base Táriba) + IA en la Nube + Código QR
+                Opción 1: WhatsApp Local por Código QR (Evolution API) + Router Multi-Modelo
               </h3>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Ideal si quieres usar el teléfono actual de la línea escaneando un código QR (como WhatsApp Web) y que tu computadora consulte la IA en la nube y responda con los precios que vayas entrenando.
+              Conecta el teléfono de la línea escaneando un código QR y deja que el Router IA conmute entre OpenAI, Gemini y Claude o tu cuenta de OpenRouter con bloqueo estricto de dominio (solo traslados).
             </p>
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5 font-mono text-[11px] text-emerald-300 overflow-x-auto space-y-1">
               <div className="text-slate-500">
-                # Archivo .env.local en tu PC de la oficina
+                # Configuración del Router Multi-Modelo (.env.local o Vercel)
               </div>
-              <div>OPENAI_API_KEY=&quot;sk-proj-...&quot;</div>
-              <div>WHATSAPP_VERIFY_TOKEN=&quot;patriotas_tariba_2025&quot;</div>
+              <div>AI_ROUTER_STRATEGY=&quot;auto_complejidad&quot;</div>
+              <div>AI_ROUTER_PRIMARY_MODEL=&quot;openai/gpt-5.4-mini&quot;</div>
               <div className="text-slate-500 pt-1">
-                # Conector Evolution API (Código QR Local o Docker)
+                # Opcional: Router API Externo (OpenRouter / Groq)
+              </div>
+              <div>AI_ROUTER_BASE_URL=&quot;https://openrouter.ai/api/v1&quot;</div>
+              <div>OPENROUTER_API_KEY=&quot;sk-or-v1-...&quot;</div>
+              <div className="text-slate-500 pt-1">
+                # Conector Evolution API (Código QR Local)
               </div>
               <div>EVOLUTION_API_URL=&quot;http://localhost:8080&quot;</div>
               <div>EVOLUTION_API_KEY=&quot;tu_clave_evolution&quot;</div>
               <div>EVOLUTION_INSTANCE_NAME=&quot;patriotas-tariba&quot;</div>
             </div>
-            <ul className="text-xs text-slate-300 space-y-1.5">
-              <li>
-                • <strong>Endpoint Webhook ya activo en tu proyecto:</strong>{' '}
-                <code className="text-amber-300">/api/whatsapp/webhook</code>
-              </li>
-              <li>
-                • En Evolution API configura el Webhook apuntando a{' '}
-                <code className="text-emerald-300">
-                  http://localhost:3000/api/whatsapp/webhook
-                </code>{' '}
-                activando el evento <code>MESSAGES_UPSERT</code>.
-              </li>
-            </ul>
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 space-y-4">
             <div className="flex items-center gap-2 text-sky-400 font-black text-sm">
               <Cloud className="h-4 w-4" />
               <h3>
-                Opción 2: Meta WhatsApp Cloud API Oficial (24/7 en Vercel sin PC encendida)
+                Opción 2: Meta WhatsApp Cloud API Oficial (24/7 en Vercel)
               </h3>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              El endpoint <code>/api/whatsapp/webhook</code> ya incluye la validación oficial <code>GET hub.challenge</code> de Meta y la lectura de mensajes de texto y pines de ubicación GPS nativos.
+              El endpoint <code>/api/whatsapp/webhook</code> incluye la validación oficial <code>GET hub.challenge</code> de Meta, lectura de pines GPS nativos y el Guardrail para rechazar cualquier mensaje que no sea sobre traslados.
             </p>
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5 font-mono text-[11px] text-sky-300 overflow-x-auto space-y-1">
               <div className="text-slate-500">
@@ -849,12 +1153,12 @@ export function BotWhatsappPanel({
             </div>
             <div className="text-xs text-slate-300 space-y-1">
               <p className="font-bold text-white">
-                Prueba rápida del Webhook por terminal (cURL):
+                Prueba rápida del Router y Guardrail por terminal (cURL):
               </p>
               <pre className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-[10px] text-amber-300 overflow-x-auto">
 {`curl -X POST http://localhost:3000/api/whatsapp/webhook \\
   -H "Content-Type: application/json" \\
-  -d '{"telefono":"584147654321","texto":"Desde Las Vegas de Tariba hasta el Sambil"}'`}
+  -d '{"telefono":"584147654321","texto":"¿Me das una receta de cocina?"}'`}
               </pre>
             </div>
           </div>

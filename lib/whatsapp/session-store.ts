@@ -1,8 +1,10 @@
 import { promises as fs } from 'fs'
 import {
+  ConfiguracionRouterIA,
   PedidoDespachoWhatsApp,
   SesionClienteWhatsApp,
 } from './types'
+import { CONFIGURACION_ROUTER_DEFECTO } from './model-router'
 
 const ARCHIVO_SESIONES_WHATSAPP = '/tmp/patriotas-whatsapp-sessions-v1.json'
 const TTL_SESION_MS = 30 * 60 * 1000 // 30 minutos de memoria activa por cliente
@@ -11,12 +13,14 @@ interface AlmacenWhatsAppServidor {
   actualizadoEn: string
   sesiones: Record<string, SesionClienteWhatsApp>
   pedidosDespacho: PedidoDespachoWhatsApp[]
+  configuracionRouter: ConfiguracionRouterIA
 }
 
 let cacheMemoria: AlmacenWhatsAppServidor = {
   actualizadoEn: new Date().toISOString(),
   sesiones: {},
   pedidosDespacho: [],
+  configuracionRouter: { ...CONFIGURACION_ROUTER_DEFECTO },
 }
 
 export async function leerAlmacenWhatsApp(): Promise<AlmacenWhatsAppServidor> {
@@ -24,8 +28,14 @@ export async function leerAlmacenWhatsApp(): Promise<AlmacenWhatsAppServidor> {
     const raw = await fs.readFile(ARCHIVO_SESIONES_WHATSAPP, 'utf-8')
     const parsed = JSON.parse(raw) as AlmacenWhatsAppServidor
     if (parsed && parsed.sesiones) {
-      cacheMemoria = parsed
-      return parsed
+      cacheMemoria = {
+        ...parsed,
+        configuracionRouter: {
+          ...CONFIGURACION_ROUTER_DEFECTO,
+          ...(parsed.configuracionRouter || {}),
+        },
+      }
+      return cacheMemoria
     }
   } catch {
     // Si no existe en /tmp aún, usamos cache en memoria
@@ -49,6 +59,30 @@ export async function guardarAlmacenWhatsApp(
   } catch {
     // Fallback silencioso a memoria si el FS no permite escritura
   }
+}
+
+export async function obtenerConfiguracionRouter(): Promise<ConfiguracionRouterIA> {
+  const almacen = await leerAlmacenWhatsApp()
+  return almacen.configuracionRouter || { ...CONFIGURACION_ROUTER_DEFECTO }
+}
+
+export async function actualizarConfiguracionRouter(
+  parcial: Partial<ConfiguracionRouterIA>
+): Promise<ConfiguracionRouterIA> {
+  const almacen = await leerAlmacenWhatsApp()
+  const actualizada: ConfiguracionRouterIA = {
+    ...CONFIGURACION_ROUTER_DEFECTO,
+    ...(almacen.configuracionRouter || {}),
+    ...parcial,
+    // Regla de negocio: el guardrail de traslados permanece activo salvo que se cambie explícitamente
+    guardrailSoloTraslados:
+      parcial.guardrailSoloTraslados ??
+      almacen.configuracionRouter?.guardrailSoloTraslados ??
+      true,
+  }
+  almacen.configuracionRouter = actualizada
+  await guardarAlmacenWhatsApp(almacen)
+  return actualizada
 }
 
 export async function obtenerSesionCliente(
