@@ -24,6 +24,7 @@ import { ReglasParametrosPanel } from '@/components/tarifas/reglas-parametros-pa
 import { CatalogoMatrizPanel } from '@/components/tarifas/catalogo-matriz-panel'
 import { AuditoriaCodigoPanel } from '@/components/tarifas/auditoria-codigo-panel'
 import { EntrenamientoPanel } from '@/components/tarifas/entrenamiento-panel'
+import { BotWhatsappPanel } from '@/components/tarifas/bot-whatsapp-panel'
 import {
   CarTaxiFront,
   Calculator,
@@ -33,11 +34,13 @@ import {
   Coins,
   MapPin,
   BrainCircuit,
+  MessageSquare,
 } from 'lucide-react'
 
 type TabPrincipal =
   | 'cotizador'
   | 'entrenamiento'
+  | 'whatsapp'
   | 'reglas'
   | 'catalogo'
   | 'auditoria'
@@ -350,6 +353,19 @@ export default function ModuloTarifasPatriotasPage() {
 
           <button
             type="button"
+            onClick={() => setTabActiva('whatsapp')}
+            className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-all ${
+              tabActiva === 'whatsapp'
+                ? 'border-teal-400 text-teal-300 bg-teal-400/10'
+                : 'border-transparent text-teal-400/80 hover:text-teal-300'
+            }`}
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span>Bot WhatsApp IA (En Vivo)</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setTabActiva('reglas')}
             className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-all ${
               tabActiva === 'reglas'
@@ -422,6 +438,15 @@ export default function ModuloTarifasPatriotasPage() {
             onCambiarAlpha={manejarCambiarAlpha}
             onEliminarLeccion={manejarEliminarLeccion}
             onRestaurarFabrica={manejarRestaurarFabrica}
+            onProbarEnCotizador={manejarProbarRuta}
+          />
+        )}
+
+        {tabActiva === 'whatsapp' && (
+          <BotWhatsappPanel
+            parametros={parametros}
+            estadoAprendizaje={estadoAprendizaje}
+            onEntrenarPrecioDesdeBot={manejarEntrenarPrecio}
             onProbarEnCotizador={manejarProbarRuta}
           />
         )}
