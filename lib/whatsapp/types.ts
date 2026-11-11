@@ -1,4 +1,4 @@
-import { ResultadoCalculoTarifa } from '@/lib/tarifas/types'
+import { ResultadoCalculoTarifa } from '../tarifas/types'
 
 export type EstadoConversacionWhatsApp =
   | 'INICIAL'
@@ -14,17 +14,51 @@ export type IntencionMensajeCliente =
   | 'COMPLETAR_DESTINO'
   | 'CONFIRMAR_DESPACHO'
   | 'CANCELAR'
+  | 'DUDA_OPERATIVA_TRASLADO'
+  | 'FUERA_DE_DOMINIO'
   | 'PREGUNTA_GENERAL'
+
+export type CategoriaDudaOperativaTraslado =
+  | 'metodos_pago'
+  | 'horario_nocturno'
+  | 'equipaje_mascotas'
+  | 'paradas_espera'
+  | 'cobertura_unidades'
+  | 'general_traslado'
+
+export type EstrategiaRouterIA =
+  | 'auto_complejidad'
+  | 'balanceo_proveedores'
+  | 'modelo_fijo'
+  | 'custom_api_router'
+
+export interface IntentoRouterModelo {
+  modelo: string
+  proveedor: string
+  estado: 'exito' | 'error' | 'omitido'
+  latenciaMs: number
+  detalle?: string
+}
+
+export interface ConfiguracionRouterIA {
+  estrategia: EstrategiaRouterIA
+  modeloPrimario: string
+  modelosFallback: string[]
+  guardrailSoloTraslados: boolean
+  customRouterUrl?: string
+  customRouterModel?: string
+}
 
 export interface UbicacionGpsWhatsApp {
   lat: number
   lon: number
   nombreReferencia?: string
-  direccion?: string
 }
 
 export interface ExtraccionNluWhatsApp {
   intencion: IntencionMensajeCliente
+  esTemaTraslado?: boolean
+  categoriaDudaTraslado?: CategoriaDudaOperativaTraslado | null
   origenDetectado: string | null
   destinoDetectado: string | null
   nocturnoExplicito: boolean
@@ -34,6 +68,10 @@ export interface ExtraccionNluWhatsApp {
   minutosEspera: number
   motorNluUsado: 'cloud_ai' | 'local_heuristic'
   razonamientoBreve: string
+  modeloUsado?: string
+  estrategiaRouterUsada?: EstrategiaRouterIA
+  latenciaRouterMs?: number
+  intentosRouter?: IntentoRouterModelo[]
 }
 
 export interface MensajeHistorialWhatsApp {
@@ -44,6 +82,22 @@ export interface MensajeHistorialWhatsApp {
   ubicacionGps?: UbicacionGpsWhatsApp
   cotizacionAdjunta?: ResultadoCalculoTarifa
   extraccionNlu?: ExtraccionNluWhatsApp
+}
+
+export interface PedidoDespachoWhatsApp {
+  id: string
+  creadoEn: string
+  telefonoCliente: string
+  nombreCliente: string
+  origen: string
+  destino: string
+  totalCop: number
+  totalUsd: number
+  totalBsBcv: number
+  distanciaKm: number
+  reglaAplicada: string
+  enlaceGoogleMaps: string
+  estadoDespacho: 'pendiente' | 'unidad_asignada' | 'completado'
 }
 
 export interface SesionClienteWhatsApp {
@@ -66,22 +120,6 @@ export interface SesionClienteWhatsApp {
   historial: MensajeHistorialWhatsApp[]
 }
 
-export interface PedidoDespachoWhatsApp {
-  id: string
-  creadoEn: string
-  telefonoCliente: string
-  nombreCliente: string
-  origen: string
-  destino: string
-  totalCop: number
-  totalUsd: number
-  totalBsBcv: number
-  distanciaKm: number
-  reglaAplicada: string
-  enlaceGoogleMaps: string
-  estadoDespacho: 'pendiente' | 'unidad_asignada' | 'completado'
-}
-
 export interface ResultadoProcesamientoWhatsApp {
   textoRespuesta: string
   sesionActualizada: SesionClienteWhatsApp
@@ -89,4 +127,5 @@ export interface ResultadoProcesamientoWhatsApp {
   extraccionNlu: ExtraccionNluWhatsApp
   pedidoDespachoCreado?: PedidoDespachoWhatsApp
   leccionesActivasMotor: number
+  configuracionRouterActiva?: ConfiguracionRouterIA
 }

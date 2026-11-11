@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { promises as fs } from 'fs'
+import path from 'path'
 import { ESTADO_APRENDIZAJE_INICIAL } from '@/lib/tarifas/aprendizaje'
 import { obtenerDbSaneada, PARAMETROS_DEFAULT } from '@/lib/tarifas/engine'
 import {
@@ -8,7 +9,12 @@ import {
   TarifasTachiraDB,
 } from '@/lib/tarifas/types'
 
-const ARCHIVO_ENTRENAMIENTO_SERVER = '/tmp/patriotas-entrenamiento-v1.json'
+const DIRECTORIO_DATOS = process.env.PATRIOTAS_DATA_DIR || path.join(process.cwd(), '.data')
+const ARCHIVO_ENTRENAMIENTO_SERVER = path.join(
+  DIRECTORIO_DATOS,
+  'patriotas-entrenamiento-v1.json'
+)
+let colaEscrituras: Promise<void> = Promise.resolve()
 
 export interface SnapshotEntrenamientoServidor {
   actualizadoEn: string
@@ -39,11 +45,16 @@ export async function leerSnapshotEntrenamiento(): Promise<SnapshotEntrenamiento
 export async function guardarSnapshotEntrenamiento(
   snapshot: SnapshotEntrenamientoServidor
 ): Promise<void> {
-  await fs.writeFile(
-    ARCHIVO_ENTRENAMIENTO_SERVER,
-    JSON.stringify(snapshot, null, 2),
-    'utf-8'
-  )
+  const escribir = async () => {
+    await fs.mkdir(DIRECTORIO_DATOS, { recursive: true })
+    const temporal = `${ARCHIVO_ENTRENAMIENTO_SERVER}.tmp`
+    await fs.writeFile(temporal, JSON.stringify(snapshot, null, 2), 'utf-8')
+    await fs.rename(temporal, ARCHIVO_ENTRENAMIENTO_SERVER)
+  }
+
+  const siguiente = colaEscrituras.then(escribir, escribir)
+  colaEscrituras = siguiente.catch(() => {})
+  await siguiente
 }
 
 export async function GET() {
