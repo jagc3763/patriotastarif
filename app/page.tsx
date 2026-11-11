@@ -55,6 +55,7 @@ export default function ModuloTarifasPatriotasPage() {
   const [estadoAprendizaje, setEstadoAprendizaje] =
     useState<EstadoAprendizajeMotor>(ESTADO_APRENDIZAJE_INICIAL)
   const [opciones, setOpciones] = useState<OpcionesViaje>(OPCIONES_VIAJE_DEFAULT)
+  const [errorPersistencia, setErrorPersistencia] = useState<string | null>(null)
 
   const [origen, setOrigen] = useState('Táriba')
   const [destino, setDestino] = useState('Pueblo Nuevo')
@@ -96,7 +97,19 @@ export default function ModuloTarifasPatriotasPage() {
           estadoAprendizaje: nuevoAprendizaje,
           db: nuevoDb,
         }),
-      }).catch(() => {})
+      })
+        .then(async (response) => {
+          const data = await response.json()
+          if (!response.ok || !data?.ok) {
+            throw new Error(data?.error || 'No se pudieron guardar los cambios.')
+          }
+          setErrorPersistencia(null)
+        })
+        .catch((error: unknown) => {
+          setErrorPersistencia(
+            error instanceof Error ? error.message : 'Error al guardar los cambios.'
+          )
+        })
     },
     []
   )
@@ -407,6 +420,11 @@ export default function ModuloTarifasPatriotasPage() {
 
       {/* CONTENIDO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+        {errorPersistencia && (
+          <div role="alert" className="mb-4 rounded-xl border border-rose-500/40 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
+            No se guardaron los cambios: {errorPersistencia}
+          </div>
+        )}
         {tabActiva === 'cotizador' && (
           <CotizadorInteligente
             origen={origen}
